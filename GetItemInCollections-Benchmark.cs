@@ -53,3 +53,13 @@ public class bench_collection
         return _sorted.TryGetValue(my_id, out var v) ? v : null;
     }
 }
+
+/*
+
+| Method    | Mean     | Error    | StdDev   | Gen0   | Allocated |
+|---------- |---------:|---------:|---------:|-------:|----------:|
+| by_array  | 11.69 ns | 0.286 ns | 0.428 ns | 0.0051 |      32 B |
+| by_dict   | 11.93 ns | 0.293 ns | 0.472 ns | 0.0051 |      32 B |
+| by_sorted | 16.47 ns | 0.385 ns | 0.514 ns | 0.0051 |      32 B |
+
+*/
