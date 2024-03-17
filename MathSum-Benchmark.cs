@@ -1,3 +1,5 @@
+using Microsoft.Diagnostics.Runtime;
+using System;
 using System.Numerics;
 using System.Runtime.Intrinsics;
 
@@ -179,28 +181,28 @@ public class bench_types
         return v2;
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark]
+    [BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector256i()
     {
         Vector256<int> v = new();
         var one = Vector256<int>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
         }
         return v;
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark]
+    [BenchmarkDotNet.Attributes.Benchmark]
     public Vector256<double> bench_vector256d()
     {
         Vector256<double> v = new();
         var one = Vector256<double>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
         }
         return v;
     }
@@ -225,8 +227,8 @@ public class bench_types
         var one = Vector64<int>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
         }
         return v;
     }
@@ -238,47 +240,47 @@ public class bench_types
         var one = Vector512<int>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
         }
         return v;
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark]
+    [BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector512d()
     {
         Vector512<double> v = new();
         var one = Vector512<double>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
         }
         return v;
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark]
+    [BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector512f()
     {
         Vector512<float> v = new();
         var one = Vector512<float>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
-            Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
+            v = Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(Vector512.Add(v, one), one), one), one), one);
         }
         return v;
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark]
+    [BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector256f()
     {
         Vector256<float> v = new();
         var one = Vector256<float>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
-            Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
+            v = Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(Vector256.Add(v, one), one), one), one), one);
         }
         return v;
     }
@@ -303,8 +305,8 @@ public class bench_types
         var one = Vector64<ushort>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
         }
         return v;
     }
@@ -316,8 +318,47 @@ public class bench_types
         var one = Vector64<byte>.One;
         for (ulong i = 0; i < ncycles; ++i)
         {
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
-            Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+            v = Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(Vector64.Add(v, one), one), one), one), one);
+        }
+        return v;
+    }
+
+    //[BenchmarkDotNet.Attributes.Benchmark]
+    public Int128 bench_int128()
+    {
+        Int128 v = 0;
+        for (ulong i = 0; i < ncycles; ++i)
+        {
+            v += 1; v += 1; v += 1; v += 1; v += 1;
+            v += 1; v += 1; v += 1; v += 1; v += 1;
+        }
+        return v;
+        Vector<double> vv = new();
+    }
+
+    //[BenchmarkDotNet.Attributes.Benchmark]
+    public object bench_vd()
+    {
+        Vector<double> one = new(1);
+        Vector<double> v = new(0);
+        for (ulong i = 0; i < ncycles; ++i)
+        {
+            v = Vector.Add(Vector.Add(Vector.Add(Vector.Add(Vector.Add(v, one), one), one), one), one);
+            v = Vector.Add(Vector.Add(Vector.Add(Vector.Add(Vector.Add(v, one), one), one), one), one);
+        }
+        return v;
+    }
+
+    //[BenchmarkDotNet.Attributes.Benchmark]
+    public object bench_vl()
+    {
+        Vector<long> one = new(1);
+        Vector<long> v = new(0);
+        for (ulong i = 0; i < ncycles; ++i)
+        {
+            v = Vector.Add(Vector.Add(Vector.Add(Vector.Add(Vector.Add(v, one), one), one), one), one);
+            v = Vector.Add(Vector.Add(Vector.Add(Vector.Add(Vector.Add(v, one), one), one), one), one);
         }
         return v;
     }
@@ -344,22 +385,26 @@ ncycles = 100_000_000
 
 | Method         | Mean      | Error     | StdDev    | Allocated |
 |--------------- |----------:|----------:|----------:|----------:|
-| vector512i     |  22.18 ms |  0.088 ms |  0.083 ms |      92 B |
-| vector512d     |  22.20 ms |  0.123 ms |  0.115 ms |      92 B |
-| vector256f     |  22.23 ms |  0.129 ms |  0.121 ms |      60 B |
-| vector256d     |  22.27 ms |  0.107 ms |  0.100 ms |      12 B |
-| vector512f     |  22.89 ms |  0.092 ms |  0.086 ms |      92 B |
-| vector256i     |  22.98 ms |  0.126 ms |  0.112 ms |      60 B |
 | bench_nint     |  44.52 ms |  0.248 ms |  0.220 ms |      33 B |
 | bench_uint     |  44.93 ms |  0.425 ms |  0.398 ms |      36 B |
 | bench_ulong    |  45.49 ms |  0.287 ms |  0.269 ms |      33 B |
+| bench_vl       | 222.30 ms |  1.19 ms  |   1.12 ms |     181 B |
+| vector256i     | 227.30 ms |   1.56 ms |   1.46 ms |     181 B |
+| vector512i     | 240.40 ms |  4.31 ms  |   4.03 ms |     280 B |
 | bench_ushort   | 275.51 ms |  1.733 ms |  1.447 ms |     200 B |
-| bench_prop_int |  298.6 ms |   2.39 ms |   2.11 ms |     200 B |
+| bench_prop_int | 298.60 ms |   2.39 ms |   2.11 ms |     200 B |
+| bench_int128   | 428.60 ms |   3.07 ms |   2.40 ms |     400 B |
 | vector64d      | 834.46 ms |  8.517 ms |  7.967 ms |     400 B |
-| bench_vector2  |  890.4 ms |   6.35 ms |   5.31 ms |     400 B |
+| bench_vector2  | 890.40 ms |   6.35 ms |   5.31 ms |     400 B |
 | bench_double   | 894.84 ms |  5.198 ms |  4.862 ms |     400 B |
-| bench_complex  |  895.1 ms |   8.00 ms |   7.48 ms |     400 B |
+| bench_complex  | 895.10 ms |   8.00 ms |   7.48 ms |     400 B |
 | bench_float    | 924.91 ms |  6.610 ms |  6.183 ms |     400 B |
+| vector256f     |  1,047 ms |  20.48 ms |  34.21 ms |     448 B |
+| vector256d     |  1,048 ms |  20.39 ms  | 27.22 ms |     400 B |
+| vector256f     |  1,049 ms |  20.90 ms  | 31.28 ms |     448 B |
+| bench_vd       |  1,051 ms |  20.43 ms |  29.30 ms |     448 B |
+| vector512f     |  1,108 ms |   4.94 ms  |  4.38 ms |     480 B |
+| vector512d     |  1,113 ms |  12.39 ms  | 11.59 ms |     480 B |
 | vector64i      |  3,906 ms |  5.552 ms |  4.637 ms |     400 B |
 | vector64f      |  4,591 ms | 10.767 ms | 10.071 ms |     424 B |
 | vector64s      |  4,812 ms |   19.8 ms |   18.5 ms |     424 B |
@@ -369,4 +414,5 @@ ncycles = 100_000_000
 | bigint_10      | 20,000 ms |    189 ms |    177 ms |   29.8 GB |
 | bigint_100     | 25,490 ms |           |           |           |
 | bigint_1000    | 26,890 ms |    50 ms  |     47 ms |  67.06 GB |
+
 */
