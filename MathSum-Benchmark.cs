@@ -181,7 +181,7 @@ public class bench_types
         return v2;
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector256i()
     {
         Vector256<int> v = new();
@@ -194,7 +194,7 @@ public class bench_types
         return v;
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public Vector256<double> bench_vector256d()
     {
         Vector256<double> v = new();
@@ -246,7 +246,7 @@ public class bench_types
         return v;
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector512d()
     {
         Vector512<double> v = new();
@@ -259,7 +259,7 @@ public class bench_types
         return v;
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector512f()
     {
         Vector512<float> v = new();
@@ -272,7 +272,7 @@ public class bench_types
         return v;
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public object bench_vector256f()
     {
         Vector256<float> v = new();
@@ -363,6 +363,19 @@ public class bench_types
         return v;
     }
 
+    [BenchmarkDotNet.Attributes.Benchmark]
+    public object bench_vector128l()
+    {
+        var one = Vector128<long>.One;
+        Vector128<long> v = new();
+        for (ulong i = 0; i < ncycles; ++i)
+        {
+            v = Vector128.Add(Vector128.Add(Vector128.Add(Vector128.Add(Vector128.Add(v, one), one), one), one), one);
+            v = Vector128.Add(Vector128.Add(Vector128.Add(Vector128.Add(Vector128.Add(v, one), one), one), one), one);
+        }
+        return v;
+    }
+
     [BenchmarkDotNet.Attributes.GlobalSetup]
     public void setup()
     {
@@ -388,8 +401,10 @@ ncycles = 100_000_000
 | bench_nint     |  44.52 ms |  0.248 ms |  0.220 ms |      33 B |
 | bench_uint     |  44.93 ms |  0.425 ms |  0.398 ms |      36 B |
 | bench_ulong    |  45.49 ms |  0.287 ms |  0.269 ms |      33 B |
-| bench_vl       | 222.30 ms |  1.19 ms  |   1.12 ms |     181 B |
+| vector128l     | 222.60 ms |   0.94 ms |   0.88 ms |     165 B |
+| bench_vl       | 222.30 ms |   1.19 ms |   1.12 ms |     181 B |
 | vector256i     | 227.30 ms |   1.56 ms |   1.46 ms |     181 B |
+| vector128l     | 228.30 ms |   2.21 ms |   1.96 ms |     165 B |
 | vector512i     | 240.40 ms |  4.31 ms  |   4.03 ms |     280 B |
 | bench_ushort   | 275.51 ms |  1.733 ms |  1.447 ms |     200 B |
 | bench_prop_int | 298.60 ms |   2.39 ms |   2.11 ms |     200 B |
@@ -400,11 +415,10 @@ ncycles = 100_000_000
 | bench_complex  | 895.10 ms |   8.00 ms |   7.48 ms |     400 B |
 | bench_float    | 924.91 ms |  6.610 ms |  6.183 ms |     400 B |
 | vector256f     |  1,047 ms |  20.48 ms |  34.21 ms |     448 B |
-| vector256d     |  1,048 ms |  20.39 ms  | 27.22 ms |     400 B |
-| vector256f     |  1,049 ms |  20.90 ms  | 31.28 ms |     448 B |
+| vector256d     |  1,048 ms |  20.39 ms |  27.22 ms |     400 B |
 | bench_vd       |  1,051 ms |  20.43 ms |  29.30 ms |     448 B |
-| vector512f     |  1,108 ms |   4.94 ms  |  4.38 ms |     480 B |
-| vector512d     |  1,113 ms |  12.39 ms  | 11.59 ms |     480 B |
+| vector512f     |  1,108 ms |   4.94 ms |   4.38 ms |     480 B |
+| vector512d     |  1,113 ms |  12.39 ms |  11.59 ms |     480 B |
 | vector64i      |  3,906 ms |  5.552 ms |  4.637 ms |     400 B |
 | vector64f      |  4,591 ms | 10.767 ms | 10.071 ms |     424 B |
 | vector64s      |  4,812 ms |   19.8 ms |   18.5 ms |     424 B |
@@ -414,5 +428,4 @@ ncycles = 100_000_000
 | bigint_10      | 20,000 ms |    189 ms |    177 ms |   29.8 GB |
 | bigint_100     | 25,490 ms |           |           |           |
 | bigint_1000    | 26,890 ms |    50 ms  |     47 ms |  67.06 GB |
-
 */
