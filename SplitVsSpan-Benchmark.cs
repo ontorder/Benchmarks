@@ -3,7 +3,6 @@ using System.Text;
 using System;
 using BenchmarkDotNet.Attributes;
 using System.Linq;
-using Org.BouncyCastle.Crypto.Signers;
 
 namespace test;
 
@@ -30,18 +29,18 @@ public class bench_splits
     [Benchmark]
     public void bench_span()
     {
-        split_span_v4("3 words string");
-        split_span_v4("frase ben più lunga sticazzi");
-        split_span_v4("fin");
-        split_span_v4("mamma mia");
-        split_span_v4("sto ascoltando luigi nono");
-        split_span_v4("voglio musica più strana");
-        split_span_v4("mi serve un testo più lungo di così");
-        split_span_v4("che i sogni si realizzino");
-        split_span_v4("consiglio del giorno giovedì ventotto");
-        split_span_v4("tutti presenti apriamo la seduta");
-        split_span_v4("votate");
-        split_span_v4("cento favorevoli venticinque astenuti settantasette contrari");
+        split_span_v5("3 words string");
+        split_span_v5("frase ben più lunga sticazzi");
+        split_span_v5("fin");
+        split_span_v5("mamma mia");
+        split_span_v5("sto ascoltando luigi nono");
+        split_span_v5("voglio musica più strana");
+        split_span_v5("mi serve un testo più lungo di così");
+        split_span_v5("che i sogni si realizzino");
+        split_span_v5("consiglio del giorno giovedì ventotto");
+        split_span_v5("tutti presenti apriamo la seduta");
+        split_span_v5("votate");
+        split_span_v5("cento favorevoli venticinque astenuti settantasette contrari");
     }
 
     private object split_string(string toSplit)
@@ -52,6 +51,7 @@ public class bench_splits
 
     private readonly static ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
     private readonly static ArrayPool<byte[]> _bytesPool = ArrayPool<byte[]>.Shared;
+
     private void split_span_v2(string toSplit)
     {
         var chars = toSplit.AsSpan();
@@ -136,17 +136,17 @@ public class bench_splits
 
     private void split_span_v4(string toSplit)
     {
-        var chars = toSplit.AsSpan();
-        var bytes = _bytePool.Rent(chars.Length * 2);
+        var strlen = toSplit.Length;
+        var bytes = _bytePool.Rent(strlen * 2);
         var slice = bytes.AsSpan();
-        var len = Encoding.UTF8.GetBytes(chars, bytes);
+        var len = Encoding.UTF8.GetBytes(toSplit, bytes);
         var positions = _bytesPool.Rent(10);
         short prev = 0;
         int wordId = 0;
         for (int byteId = 0; byteId < len; ++byteId)
         {
             // potrebbero esserci Empty
-            if (bytes[byteId] == Spazio || byteId == (chars.Length - 1))
+            if (bytes[byteId] == Spazio || byteId == (strlen - 1))
             {
                 var end = (short)(byteId + 1);
                 var word = slice[prev..end];
@@ -162,6 +162,36 @@ public class bench_splits
         _bytesPool.Return(positions);
         _bytePool.Return(bytes);
     }
+
+    private static ArrayPool<ReadOnlyMemory<byte>> _romPool = ArrayPool<ReadOnlyMemory<byte>>.Shared;
+
+    private void split_span_v5(string toSplit)
+    {
+        var strlen = toSplit.Length;
+        var bytes = _bytePool.Rent(strlen * 2);
+        var len = Encoding.UTF8.GetBytes(toSplit, bytes);
+        var romBytes = new ReadOnlyMemory<byte>(bytes);
+        var romSlices = _romPool.Rent(10);
+        short prev = 0;
+        int wordId = 0;
+        for (int byteId = 0; byteId < len; ++byteId)
+        {
+            // potrebbero esserci Empty
+            if (bytes[byteId] == Spazio || byteId == (strlen - 1))
+            {
+                var end = (short)(byteId + 1);
+                romSlices[wordId] = romBytes[prev..end];
+                prev = end;
+                ++wordId;
+            }
+        }
+
+        _bytePool.Return(bytes);
+        _romPool.Return(romSlices);
+    }
+
+    // stavo pensando se si può elaborare stringa tramite simd ma
+    // tanto la parte che occupa di più è Rent()
 }
 
 /*
@@ -199,4 +229,10 @@ span v4 corretto
 |------------ |---------:|----------:|----------:|-------:|----------:|
 | bench_split | 2.380 us | 0.0143 us | 0.0127 us | 0.9537 |    6000 B |
 | bench_span  | 3.416 us | 0.0670 us | 0.0772 us |      - |         - |
+
+span v5
+| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
+|------------ |-----------:|---------:|---------:|-------:|----------:|
+| bench_split | 2,416.7 ns | 21.65 ns | 20.25 ns | 0.9537 |    6000 B |
+| bench_span  |   931.5 ns |  3.52 ns |  3.12 ns |      - |         - |
 */
