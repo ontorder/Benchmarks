@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Text;
 using System;
 using BenchmarkDotNet.Attributes;
+using System.Linq;
 
 namespace test;
 
@@ -25,7 +26,10 @@ public class bench_splits
     }
 
     private object split_string(string toSplit)
-        => toSplit.Split(' ');
+        => toSplit
+            .Split(' ')
+            .Select(Encoding.UTF8.GetBytes)
+            .ToArray();
 
     private void split_span(string toSplit)
     {
@@ -65,6 +69,6 @@ public class bench_splits
 /*
 | Method      | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |------------ |---------:|--------:|--------:|-------:|----------:|
-| bench_split | 153.1 ns | 1.34 ns | 1.12 ns | 0.0648 |     408 B |
-| bench_span  | 549.7 ns | 4.54 ns | 4.25 ns |      - |         - |
+| bench_split | 484.2 ns | 6.32 ns | 5.92 ns | 0.1869 |    1176 B |
+| bench_span  | 567.9 ns | 3.02 ns | 2.68 ns |      - |         - |
 */
