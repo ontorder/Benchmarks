@@ -43,18 +43,18 @@ public class bench_splits
     [Benchmark]
     public void bench_span()
     {
-        _ = split_v512("3 words string");
-        _ = split_v512("frase ben piu lunga sticazzi");
-        _ = split_v512("fin");
-        _ = split_v512("mamma mia");
-        _ = split_v512("sto ascoltando luigi nono");
-        _ = split_v512("voglio musica piu strana");
-        _ = split_v512("mi serve un testo piu lungo di c");
-        _ = split_v512("che i sogni si realizzino");
-        _ = split_v512("consiglio del giorno giovedi ven");
-        _ = split_v512("tutti presenti apriamo la seduta");
-        _ = split_v512("votate");
-        _ = split_v512("cento favorevoli venticinque ast");
+        _ = split_v256_reset("3 words string");
+        _ = split_v256_reset("frase ben piu lunga sticazzi");
+        _ = split_v256_reset("fin");
+        _ = split_v256_reset("mamma mia");
+        _ = split_v256_reset("sto ascoltando luigi nono");
+        _ = split_v256_reset("voglio musica piu strana");
+        _ = split_v256_reset("mi serve un testo piu lungo di c");
+        _ = split_v256_reset("che i sogni si realizzino");
+        _ = split_v256_reset("consiglio del giorno giovedi ven");
+        _ = split_v256_reset("tutti presenti apriamo la seduta");
+        _ = split_v256_reset("votate");
+        _ = split_v256_reset("cento favorevoli venticinque ast");
     }
 
     private byte[][] split_string(string toSplit)
@@ -248,7 +248,7 @@ public class bench_splits
     private readonly Vector256<byte> SpacesV256 = Vector256<byte>.One * 32;
     private readonly int VectorByteLen = Vector<byte>.Count;
 
-    public IEnumerable<ReadOnlyMemory<byte>> split_v256(string toSplit)
+    private IEnumerable<ReadOnlyMemory<byte>> split_v256(string toSplit)
     {
         var toSplitBytes = new byte[VectorByteLen];
         Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
@@ -283,10 +283,43 @@ public class bench_splits
         return spans;
     }
 
+    public IEnumerable<ReadOnlyMemory<byte>> split_v256_reset(string toSplit)
+    {
+        var toSplitBytes = new byte[VectorByteLen];
+        Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
+        var toSplitV256 = Vector256.Create((ReadOnlySpan<byte>)toSplitBytes);
+
+        var matchesV256 = Vector256.Equals(toSplitV256, SpacesV256);
+        var spacesBitMask = (uint)Avx2.MoveMask(matchesV256);
+        var nonZeroes = BitOperations.PopCount(spacesBitMask);
+        var posArr = new int[nonZeroes];
+        int posArrId = 0;
+
+        while (spacesBitMask != 0)
+        {
+            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
+            spacesBitMask ^= 1u << trailZeroCount;
+            posArr[posArrId++] = trailZeroCount;
+        }
+
+        int prev = 0;
+        var toSplitMem = toSplitBytes.AsMemory();
+        var spans = new ReadOnlyMemory<byte>[posArr.Length + 1];
+        for (int i = 0; i < posArr.Length; ++i)
+        {
+            spans[i] = toSplitMem[prev..posArr[i]];
+            prev = posArr[i];
+        }
+        if (prev < toSplitBytes.Length)
+            spans[^1] = toSplitMem[prev..];
+
+        return spans;
+    }
+
     private readonly Vector512<byte> SpacesV512 = Vector512<byte>.One * 32;
     private readonly int Vector512Len = Vector512<byte>.Count;
 
-    public IEnumerable<ReadOnlyMemory<byte>> split_v512(string toSplit)
+    private IEnumerable<ReadOnlyMemory<byte>> split_v512(string toSplit)
     {
         var toSplitBytes = new byte[Vector512Len];
         var encoded = Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
@@ -329,7 +362,7 @@ public class bench_splits
         public Span<byte> Span9;
     }
 
-    public void split_v256b(string toSplit, ref Spans spans)
+    private void split_v256b(string toSplit, ref Spans spans)
     {
         Span<byte> toSplitSpan = stackalloc byte[VectorByteLen];
         Encoding.UTF8.GetBytes(toSplit, toSplitSpan);
@@ -360,7 +393,7 @@ public class bench_splits
             ; //  spans.Span5 = toSplitMem[prev..];
     }
 
-    public IEnumerable<ReadOnlyMemory<byte>> split_vector(string toSplit)
+    private IEnumerable<ReadOnlyMemory<byte>> split_vector(string toSplit)
     {
         var toSplitBytes = new byte[VectorByteLen];
         Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
@@ -392,13 +425,11 @@ public class bench_splits
         return spans;
     }
 
-    // test 1: usare .ExtractMostSignificantBits();
-    // test 2: mettere resettare bit trovato e usare sempre LeadingZeroCount
-    // test 3: tentare lo stesso Vector512
+    // test: usare .ExtractMostSignificantBits();
     // non esiste un modo per parallelizzare conteggio bit, vero?
     // se tipo facessi 000101010100 *
     //                 012345678901 = indici
-    // potrei recuperare valori non zero?
+    // potrei solamente recuperare valori non zero da un vettore?
 }
 
 /*
@@ -460,4 +491,10 @@ span vector512
 |------------ |-----------:|---------:|---------:|-------:|----------:|
 | bench_split | 2,323.7 ns | 13.74 ns | 12.85 ns | 0.9193 |   5.65 KB |
 | bench_span  |   756.0 ns |  2.79 ns |  2.17 ns | 0.5198 |   3.19 KB |
+
+span v256 via reset
+| Method      | Mean       | Error   | StdDev  | Gen0   | Allocated |
+|------------ |-----------:|--------:|--------:|-------:|----------:|
+| bench_split | 2,324.0 ns | 9.75 ns | 8.65 ns | 0.9193 |   5.65 KB |
+| bench_span  |   442.9 ns | 3.35 ns | 3.14 ns | 0.3443 |   2.11 KB |
 */
