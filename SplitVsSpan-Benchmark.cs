@@ -42,18 +42,18 @@ public class bench_splits
     [Benchmark]
     public void bench_span()
     {
-        _ = split_v256("3 words string");
-        _ = split_v256("frase ben piu lunga sticazzi");
-        _ = split_v256("fin");
-        _ = split_v256("mamma mia");
-        _ = split_v256("sto ascoltando luigi nono");
-        _ = split_v256("voglio musica piu strana");
-        _ = split_v256("mi serve un testo piu lungo di c");
-        _ = split_v256("che i sogni si realizzino");
-        _ = split_v256("consiglio del giorno giovedi ven");
-        _ = split_v256("tutti presenti apriamo la seduta");
-        _ = split_v256("votate");
-        _ = split_v256("cento favorevoli venticinque ast");
+        _ = split_vector("3 words string");
+        _ = split_vector("frase ben piu lunga sticazzi");
+        _ = split_vector("fin");
+        _ = split_vector("mamma mia");
+        _ = split_vector("sto ascoltando luigi nono");
+        _ = split_vector("voglio musica piu strana");
+        _ = split_vector("mi serve un testo piu lungo di c");
+        _ = split_vector("che i sogni si realizzino");
+        _ = split_vector("consiglio del giorno giovedi ven");
+        _ = split_vector("tutti presenti apriamo la seduta");
+        _ = split_vector("votate");
+        _ = split_vector("cento favorevoli venticinque ast");
     }
 
     private byte[][] split_string(string toSplit)
@@ -282,38 +282,37 @@ public class bench_splits
         return spans;
     }
 
+    private readonly int VectorByteLen = Vector<byte>.Count;
+
     public IEnumerable<ReadOnlyMemory<byte>> split_vector(string toSplit)
     {
-        var toSplitBytes = new byte[Vector<byte>.Count];
+        var toSplitBytes = new byte[VectorByteLen];
         Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
         var toSplitVec = new Vector<byte>(toSplitBytes);
 
         Vector<byte> matchesVec = Vector.Equals(toSplitVec, _spacesVec);
 
-        var spacesBitMask = 0u;
-        var nonZeroes = BitOperations.PopCount(spacesBitMask);
-        var posArr = new List<int>(nonZeroes);
-        int prevTzc = 0;
-    reshiftmedaddy:
+        var posArrId = 0;
+        Span<int> posArr = stackalloc int[9];
+        int toSplitId = 0;
+
+        for (; toSplitId < VectorByteLen; ++toSplitId)
         {
-            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
-            posArr.Add(trailZeroCount + prevTzc);
-            spacesBitMask >>= trailZeroCount + 1;
-            prevTzc += trailZeroCount + 1;
-            if (spacesBitMask != 0)
-                goto reshiftmedaddy;
+            if (matchesVec[toSplitId] == 0) continue;
+            posArr[posArrId++] = toSplitId;
         }
 
         int prev = 0;
-        var spans = new ReadOnlyMemory<byte>[posArr.Count + 1];
-        for (int i = 0; i < posArr.Count; ++i)
+        var toSplitMem = toSplitBytes.AsMemory();
+        var spans = new ReadOnlyMemory<byte>[posArr.Length];
+        for (int i = 0; i < posArrId; ++i)
         {
-            var span = toSplitBytes[prev..posArr[i]];
+            var span = toSplitMem[prev..posArr[i]];
             spans[i] = span;
             prev = posArr[i];
         }
         if (prev < toSplitBytes.Length)
-            spans[^1] = toSplitBytes[prev..];
+            spans[posArrId] = toSplitMem[prev..];
 
         return spans;
     }
@@ -374,4 +373,10 @@ span v256
 |------------ |-----------:|---------:|---------:|-------:|----------:|
 | bench_split | 2,239.8 ns | 22.62 ns | 18.89 ns | 0.9193 |   5.65 KB |
 | bench_span  |   438.8 ns |  2.53 ns |  2.37 ns | 0.3443 |   2.11 KB |
+
+span vector
+| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
+|------------ |-----------:|---------:|---------:|-------:|----------:|
+| bench_split | 2,275.9 ns | 43.32 ns | 42.55 ns | 0.9193 |   5.65 KB |
+| bench_span  |   634.0 ns |  3.93 ns |  3.28 ns | 0.4282 |   2.63 KB |
 */
