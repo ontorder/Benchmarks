@@ -4,11 +4,12 @@ namespace test;
 
 public class bench_stupid
 {
+    public int a = 0;
+    public int i = 1;
+
     [Benchmark]
     public int short_name()
     {
-        int a = 0;
-        int i = 1;
         a += i;
         a *= i;
         a += i;
@@ -41,9 +42,9 @@ public class bench_stupid
         return aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
     }
 }
-/*
-| Method     | Mean      | Error     | StdDev    |
-|----------- |----------:|----------:|----------:|
-| short_name | 0.0040 ns | 0.0050 ns | 0.0042 ns |
-| long_name  | 3.6804 ns | 0.0181 ns | 0.0170 ns |
+/* OOPSIE
+| Method     | Mean     | Error     | StdDev    |
+|----------- |---------:|----------:|----------:|
+| short_name | 3.904 ns | 0.0464 ns | 0.0434 ns |
+| long_name  | 3.714 ns | 0.0274 ns | 0.0229 ns |
 */
