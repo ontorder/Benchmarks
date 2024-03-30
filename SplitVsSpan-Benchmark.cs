@@ -43,18 +43,18 @@ public class bench_splits
     [Benchmark]
     public void bench_span()
     {
-        _ = split_v256_reset("3 words string");
-        _ = split_v256_reset("frase ben piu lunga sticazzi");
-        _ = split_v256_reset("fin");
-        _ = split_v256_reset("mamma mia");
-        _ = split_v256_reset("sto ascoltando luigi nono");
-        _ = split_v256_reset("voglio musica piu strana");
-        _ = split_v256_reset("mi serve un testo piu lungo di c");
-        _ = split_v256_reset("che i sogni si realizzino");
-        _ = split_v256_reset("consiglio del giorno giovedi ven");
-        _ = split_v256_reset("tutti presenti apriamo la seduta");
-        _ = split_v256_reset("votate");
-        _ = split_v256_reset("cento favorevoli venticinque ast");
+        _ = split_v256_reset_emb("3 words string");
+        _ = split_v256_reset_emb("frase ben piu lunga sticazzi");
+        _ = split_v256_reset_emb("fin");
+        _ = split_v256_reset_emb("mamma mia");
+        _ = split_v256_reset_emb("sto ascoltando luigi nono");
+        _ = split_v256_reset_emb("voglio musica piu strana");
+        _ = split_v256_reset_emb("mi serve un testo piu lungo di c");
+        _ = split_v256_reset_emb("che i sogni si realizzino");
+        _ = split_v256_reset_emb("consiglio del giorno giovedi ven");
+        _ = split_v256_reset_emb("tutti presenti apriamo la seduta");
+        _ = split_v256_reset_emb("votate");
+        _ = split_v256_reset_emb("cento favorevoli venticinque ast");
     }
 
     private byte[][] split_string(string toSplit)
@@ -65,6 +65,21 @@ public class bench_splits
 
     private readonly static ArrayPool<byte> _bytePool = ArrayPool<byte>.Shared;
     private readonly static ArrayPool<byte[]> _bytesPool = ArrayPool<byte[]>.Shared;
+
+    private void split_string_pool(string toSplit)
+    {
+        var splitted = toSplit.Split(' ');
+        var arr = _bytesPool.Rent(splitted.Length);
+        for (int i = 0; i < splitted.Length; ++i)
+        {
+            var s = splitted[i];
+            var mem = _bytePool.Rent(s.Length);
+            _ = Encoding.UTF8.GetBytes(s, mem);
+            arr[i] = mem;
+        }
+        for (int i = 0; i < splitted.Length; ++i) _bytePool.Return(arr[i]);
+        _bytesPool.Return(arr);
+    }
 
     private void split_span_v2(string toSplit)
     {
@@ -283,7 +298,7 @@ public class bench_splits
         return spans;
     }
 
-    public IEnumerable<ReadOnlyMemory<byte>> split_v256_reset(string toSplit)
+    private IEnumerable<ReadOnlyMemory<byte>> split_v256_reset(string toSplit)
     {
         var toSplitBytes = new byte[VectorByteLen];
         Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
@@ -291,6 +306,39 @@ public class bench_splits
 
         var matchesV256 = Vector256.Equals(toSplitV256, SpacesV256);
         var spacesBitMask = (uint)Avx2.MoveMask(matchesV256);
+        var nonZeroes = BitOperations.PopCount(spacesBitMask);
+        var posArr = new int[nonZeroes];
+        int posArrId = 0;
+
+        while (spacesBitMask != 0)
+        {
+            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
+            spacesBitMask ^= 1u << trailZeroCount;
+            posArr[posArrId++] = trailZeroCount;
+        }
+
+        int prev = 0;
+        var toSplitMem = toSplitBytes.AsMemory();
+        var spans = new ReadOnlyMemory<byte>[posArr.Length + 1];
+        for (int i = 0; i < posArr.Length; ++i)
+        {
+            spans[i] = toSplitMem[prev..posArr[i]];
+            prev = posArr[i];
+        }
+        if (prev < toSplitBytes.Length)
+            spans[^1] = toSplitMem[prev..];
+
+        return spans;
+    }
+
+    private IEnumerable<ReadOnlyMemory<byte>> split_v256_reset_emb(string toSplit)
+    {
+        var toSplitBytes = new byte[VectorByteLen];
+        Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
+        var toSplitV256 = Vector256.Create((ReadOnlySpan<byte>)toSplitBytes);
+
+        var matchesV256 = Vector256.Equals(toSplitV256, SpacesV256);
+        var spacesBitMask = matchesV256.ExtractMostSignificantBits();
         var nonZeroes = BitOperations.PopCount(spacesBitMask);
         var posArr = new int[nonZeroes];
         int posArrId = 0;
@@ -425,7 +473,6 @@ public class bench_splits
         return spans;
     }
 
-    // test: usare .ExtractMostSignificantBits();
     // non esiste un modo per parallelizzare conteggio bit, vero?
     // se tipo facessi 000101010100 *
     //                 012345678901 = indici
@@ -497,4 +544,16 @@ span v256 via reset
 |------------ |-----------:|--------:|--------:|-------:|----------:|
 | bench_split | 2,324.0 ns | 9.75 ns | 8.65 ns | 0.9193 |   5.65 KB |
 | bench_span  |   442.9 ns | 3.35 ns | 3.14 ns | 0.3443 |   2.11 KB |
+
+span string pool
+| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
+|------------ |---------:|----------:|----------:|-------:|----------:|
+| bench_split | 2.294 us | 0.0088 us | 0.0074 us | 0.9193 |   5.65 KB |
+| bench_span  | 3.657 us | 0.0687 us | 0.0609 us | 0.3548 |   2.18 KB |
+
+span v256 reset+emb
+| Method      | Mean       | Error   | StdDev  | Gen0   | Allocated |
+|------------ |-----------:|--------:|--------:|-------:|----------:|
+| bench_split | 2,284.8 ns | 7.13 ns | 5.57 ns | 0.9193 |   5.65 KB |
+| bench_span  |   443.9 ns | 5.15 ns | 4.82 ns | 0.3443 |   2.11 KB |
 */
