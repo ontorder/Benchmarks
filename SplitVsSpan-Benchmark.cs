@@ -3,47 +3,60 @@ using System.Text;
 using System;
 using BenchmarkDotNet.Attributes;
 using System.Linq;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.Intrinsics.X86;
+using System.Runtime.Intrinsics;
+using Orleans.Serialization.Codecs;
 
 namespace test;
 
 [MemoryDiagnoser]
 public class bench_splits
 {
+    private Vector<byte> _spacesVec;
+
+    public bench_splits()
+    {
+        var spacesBytes = Encoding.UTF8.GetBytes(new string(' ', 32));
+        _spacesVec = new Vector<byte>(spacesBytes);
+    }
+
     [Benchmark]
     public void bench_split()
     {
         _ = split_string("3 words string");
-        _ = split_string("frase ben più lunga sticazzi");
+        _ = split_string("frase ben piu lunga sticazzi");
         _ = split_string("fin");
         _ = split_string("mamma mia");
         _ = split_string("sto ascoltando luigi nono");
-        _ = split_string("voglio musica più strana");
-        _ = split_string("mi serve un testo più lungo di così");
+        _ = split_string("voglio musica piu strana");
+        _ = split_string("mi serve un testo piu lungo di c");
         _ = split_string("che i sogni si realizzino");
-        _ = split_string("consiglio del giorno giovedì ventotto");
+        _ = split_string("consiglio del giorno giovedi ven");
         _ = split_string("tutti presenti apriamo la seduta");
         _ = split_string("votate");
-        _ = split_string("cento favorevoli venticinque astenuti settantasette contrari");
+        _ = split_string("cento favorevoli venticinque ast");
     }
 
     [Benchmark]
     public void bench_span()
     {
-        split_span_v5("3 words string");
-        split_span_v5("frase ben più lunga sticazzi");
-        split_span_v5("fin");
-        split_span_v5("mamma mia");
-        split_span_v5("sto ascoltando luigi nono");
-        split_span_v5("voglio musica più strana");
-        split_span_v5("mi serve un testo più lungo di così");
-        split_span_v5("che i sogni si realizzino");
-        split_span_v5("consiglio del giorno giovedì ventotto");
-        split_span_v5("tutti presenti apriamo la seduta");
-        split_span_v5("votate");
-        split_span_v5("cento favorevoli venticinque astenuti settantasette contrari");
+        _ = split_v256("3 words string");
+        _ = split_v256("frase ben piu lunga sticazzi");
+        _ = split_v256("fin");
+        _ = split_v256("mamma mia");
+        _ = split_v256("sto ascoltando luigi nono");
+        _ = split_v256("voglio musica piu strana");
+        _ = split_v256("mi serve un testo piu lungo di c");
+        _ = split_v256("che i sogni si realizzino");
+        _ = split_v256("consiglio del giorno giovedi ven");
+        _ = split_v256("tutti presenti apriamo la seduta");
+        _ = split_v256("votate");
+        _ = split_v256("cento favorevoli venticinque ast");
     }
 
-    private object split_string(string toSplit)
+    private byte[][] split_string(string toSplit)
         => toSplit
             .Split(' ')
             .Select(Encoding.UTF8.GetBytes)
@@ -163,7 +176,7 @@ public class bench_splits
         _bytePool.Return(bytes);
     }
 
-    private static ArrayPool<ReadOnlyMemory<byte>> _romPool = ArrayPool<ReadOnlyMemory<byte>>.Shared;
+    private static readonly ArrayPool<ReadOnlyMemory<byte>> _romPool = ArrayPool<ReadOnlyMemory<byte>>.Shared;
 
     private void split_span_v5(string toSplit)
     {
@@ -190,8 +203,128 @@ public class bench_splits
         _romPool.Return(romSlices);
     }
 
-    // stavo pensando se si può elaborare stringa tramite simd ma
-    // tanto la parte che occupa di più è Rent()
+    private SplitSpan5B_Data split_span_v5b(string toSplit)
+    {
+        var strlen = toSplit.Length;
+        var bytes = _bytePool.Rent(strlen * 2);
+        var len = Encoding.UTF8.GetBytes(toSplit, bytes);
+        var romBytes = new ReadOnlyMemory<byte>(bytes);
+        var romSlices = _romPool.Rent(10);
+        short prev = 0;
+        int wordId = 0;
+        for (int byteId = 0; byteId < len; ++byteId)
+        {
+            // potrebbero esserci Empty
+            if (bytes[byteId] == Spazio || byteId == (strlen - 1))
+            {
+                var end = (short)(byteId + 1);
+                romSlices[wordId] = romBytes[prev..end];
+                prev = end;
+                ++wordId;
+            }
+        }
+        return new SplitSpan5B_Data(bytes, romSlices);
+    }
+
+    public readonly struct SplitSpan5B_Data : IDisposable
+    {
+        public readonly byte[] Bytes;
+        public readonly ReadOnlyMemory<byte>[] RomSlices;
+
+        public SplitSpan5B_Data(byte[] bytes, ReadOnlyMemory<byte>[] romSlices)
+        {
+            Bytes = bytes;
+            RomSlices = romSlices;
+        }
+
+        public void Dispose()
+        {
+            _bytePool.Return(Bytes);
+            _romPool.Return(RomSlices);
+        }
+    }
+
+    Vector256<byte> _spacesV256 = Vector256<byte>.One * 32;
+
+    public IEnumerable<ReadOnlyMemory<byte>> split_v256(string toSplit)
+    {
+        var toSplitBytes = new byte[Vector<byte>.Count];
+        Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
+        var toSplitVec = new Vector<byte>(toSplitBytes);
+        var toSplitV256 = toSplitVec.AsVector256();
+
+        var matchesV256 = Vector256.Equals(toSplitV256, _spacesV256);
+        var spacesBitMask = (uint)Avx2.MoveMask(matchesV256);
+        var nonZeroes = BitOperations.PopCount(spacesBitMask);
+        var posArr = new int[nonZeroes];
+        int prevTzc = 0;
+        int posArrId = 0;
+
+        while (spacesBitMask != 0)
+        {
+            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
+            posArr[posArrId++] = trailZeroCount + prevTzc;
+            spacesBitMask >>= trailZeroCount + 1;
+            prevTzc += trailZeroCount + 1;
+        }
+
+        int prev = 0;
+        var toSplitMem = toSplitBytes.AsMemory();
+        var spans = new ReadOnlyMemory<byte>[posArr.Length + 1];
+        for (int i = 0; i < posArr.Length; ++i)
+        {
+            spans[i] = toSplitMem[prev..posArr[i]];
+            prev = posArr[i];
+        }
+        if (prev < toSplitBytes.Length)
+            spans[^1] = toSplitMem[prev..];
+
+        return spans;
+    }
+
+    public IEnumerable<ReadOnlyMemory<byte>> split_vector(string toSplit)
+    {
+        var toSplitBytes = new byte[Vector<byte>.Count];
+        Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
+        var toSplitVec = new Vector<byte>(toSplitBytes);
+
+        Vector<byte> matchesVec = Vector.Equals(toSplitVec, _spacesVec);
+
+        var spacesBitMask = 0u;
+        var nonZeroes = BitOperations.PopCount(spacesBitMask);
+        var posArr = new List<int>(nonZeroes);
+        int prevTzc = 0;
+    reshiftmedaddy:
+        {
+            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
+            posArr.Add(trailZeroCount + prevTzc);
+            spacesBitMask >>= trailZeroCount + 1;
+            prevTzc += trailZeroCount + 1;
+            if (spacesBitMask != 0)
+                goto reshiftmedaddy;
+        }
+
+        int prev = 0;
+        var spans = new ReadOnlyMemory<byte>[posArr.Count + 1];
+        for (int i = 0; i < posArr.Count; ++i)
+        {
+            var span = toSplitBytes[prev..posArr[i]];
+            spans[i] = span;
+            prev = posArr[i];
+        }
+        if (prev < toSplitBytes.Length)
+            spans[^1] = toSplitBytes[prev..];
+
+        return spans;
+    }
+
+    // test 1: usare .ExtractMostSignificantBits();
+    // test 2: mettere resettare bit trovato e usare sempre LeadingZeroCount
+    // test 3: tentare lo stesso Vector512
+    // non esiste un modo per parallelizzare conteggio bit, vero?
+    // se tipo facessi 000101010100 *
+    //                 012345678901 = indici
+    // potrei recuperare valori non zero?
 }
 
 /*
@@ -235,4 +368,10 @@ span v5
 |------------ |-----------:|---------:|---------:|-------:|----------:|
 | bench_split | 2,416.7 ns | 21.65 ns | 20.25 ns | 0.9537 |    6000 B |
 | bench_span  |   931.5 ns |  3.52 ns |  3.12 ns |      - |         - |
+
+span v256
+| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
+|------------ |-----------:|---------:|---------:|-------:|----------:|
+| bench_split | 2,239.8 ns | 22.62 ns | 18.89 ns | 0.9193 |   5.65 KB |
+| bench_span  |   438.8 ns |  2.53 ns |  2.37 ns | 0.3443 |   2.11 KB |
 */
