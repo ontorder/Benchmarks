@@ -40,8 +40,7 @@ public class bench_splits
         _ = split_string("cento favorevoli venticinque ast");
     }
 
-    [Benchmark]
-    public void bench_span()
+    public void bench_span_rent()
     {
         split_v256b_ator ator;
         split_v256b_data data;
@@ -62,20 +61,21 @@ public class bench_splits
         _bytePool.Return(toSplitRent);
     }
 
-    public void bench_span_ver()
+    [Benchmark]
+    public void bench_span()
     {
-        _ = split_v256_reset_emb("3 words string");
-        _ = split_v256_reset_emb("frase ben piu lunga sticazzi");
-        _ = split_v256_reset_emb("fin");
-        _ = split_v256_reset_emb("mamma mia");
-        _ = split_v256_reset_emb("sto ascoltando luigi nono");
-        _ = split_v256_reset_emb("voglio musica piu strana");
-        _ = split_v256_reset_emb("mi serve un testo piu lungo di c");
-        _ = split_v256_reset_emb("che i sogni si realizzino");
-        _ = split_v256_reset_emb("consiglio del giorno giovedi ven");
-        _ = split_v256_reset_emb("tutti presenti apriamo la seduta");
-        _ = split_v256_reset_emb("votate");
-        _ = split_v256_reset_emb("cento favorevoli venticinque ast");
+        _ = split_v256_unrll("3 words string");
+        _ = split_v256_unrll("frase ben piu lunga sticazzi");
+        _ = split_v256_unrll("fin");
+        _ = split_v256_unrll("mamma mia");
+        _ = split_v256_unrll("sto ascoltando luigi nono");
+        _ = split_v256_unrll("voglio musica piu strana");
+        _ = split_v256_unrll("mi serve un testo piu lungo di c");
+        _ = split_v256_unrll("che i sogni si realizzino");
+        _ = split_v256_unrll("consiglio del giorno giovedi ven");
+        _ = split_v256_unrll("tutti presenti apriamo la seduta");
+        _ = split_v256_unrll("votate");
+        _ = split_v256_unrll("cento favorevoli venticinque ast");
     }
 
     private byte[][] split_string(string toSplit)
@@ -319,6 +319,80 @@ public class bench_splits
         return spans;
     }
 
+    public struct UnrollData
+    {
+        public ReadOnlyMemory<byte> Span1;
+        public ReadOnlyMemory<byte> Span2;
+        public ReadOnlyMemory<byte> Span3;
+        public ReadOnlyMemory<byte> Span4;
+        public ReadOnlyMemory<byte> Span5;
+        public ReadOnlyMemory<byte> Span6;
+        public ReadOnlyMemory<byte> Span7;
+        public ReadOnlyMemory<byte> Span8;
+        public ReadOnlyMemory<byte> Span9;
+    }
+
+    public UnrollData split_v256_unrll(string toSplit)
+    {
+        var toSplitBytes = new byte[VectorByteLen];
+        var convertedLen = Encoding.UTF8.GetBytes(toSplit, toSplitBytes);
+        var toSplitV256 = Vector256.Create((ReadOnlySpan<byte>)toSplitBytes);
+        var matchesV256 = Vector256.Equals(toSplitV256, SpacesV256);
+
+        var toSplitMem = toSplitBytes.AsMemory();
+        var data = new UnrollData();
+
+        var spacesBitMask = (uint)Avx2.MoveMask(matchesV256);
+        int trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span1 = toSplitMem[..trailZeroCount];
+
+        int prevTzc = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+        spacesBitMask >>= prevTzc;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span2 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        var prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span3 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span4 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span5 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span6 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span7 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevDiff = trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        prevTzc += prevDiff;
+        spacesBitMask >>= prevDiff;
+        trailZeroCount = (int)Bmi1.TrailingZeroCount(spacesBitMask) & 0x1F;
+        data.Span8 = toSplitMem[prevTzc..(trailZeroCount + prevTzc)];
+        prevTzc += trailZeroCount + (int)Bmi2.ParallelBitExtract((uint)trailZeroCount, 1);
+
+        data.Span9 = toSplitMem[prevTzc..convertedLen];
+
+        return data;
+    }
+
     private IEnumerable<ReadOnlyMemory<byte>> split_v256_reset(string toSplit)
     {
         var toSplitBytes = new byte[VectorByteLen];
@@ -516,12 +590,12 @@ public class bench_splits
 | Method      | Mean     | Error     | StdDev    | Median | Allocated |
 |------------ |---------:|----------:|----------:|-------:|----------:|
 | split string| 2.345 us |  11.33 ns |  10.05 ns | 0.9193 |    5784 B |
-| span v2     | 3.281 us | 0.0217 us | 0.0181 us | 3.275  |         - |
-| v3 StartEnd | 3.697 us | 0.0642 us | 0.0600 us |      - |         - |
-| v3 tupla    | 3.605 us | 0.0710 us | 0.0899 us |      - |         - |
-| v4 oopsie   | 1.361 us | 0.0076 us | 0.0067 us | 0.2613 |    1.6 KB |
-| v4 corretto | 3.416 us | 0.0670 us | 0.0772 us |      - |         - |
-| string pool | 3.657 us | 0.0687 us | 0.0609 us | 0.3548 |   2.18 KB |
+| span v2     | 3.281 us |  21.70 ns |  18.10 ns | 3.275  |         - |
+| v3 StartEnd | 3.697 us |  64.20 ns |  60.00 ns |      - |         - |
+| v3 tupla    | 3.605 us |  71.00 ns |  89.90 ns |      - |         - |
+| v4 oopsie   | 1.361 us |  07.60 ns |  06.70 ns | 0.2613 |    1.6 KB |
+| v4 corretto | 3.416 us |  67.00 ns |  77.20 ns |      - |         - |
+| string pool | 3.657 us |  68.70 ns |  60.90 ns | 0.3548 |   2.18 KB |
 | span v5     | 931.5 ns |   3.52 ns |   3.12 ns |      - |         - |
 | vector256   | 438.8 ns |   2.53 ns |   2.37 ns | 0.3443 |   2.11 KB |
 | vector      | 634.0 ns |   3.93 ns |   3.28 ns | 0.4282 |   2.63 KB |
@@ -530,4 +604,6 @@ public class bench_splits
 | v245 rst emb| 443.9 ns |   5.15 ns |   4.82 ns | 0.3443 |   2.11 KB |
 | v256b1+2 v1 | 602.2 ns |   1.91 ns |   1.49 ns |      - |         - |
 | v256b1+2 v2 | 305.7 ns |   1.77 ns |   1.57 ns |      - |         - |
+| v256 unroll | 560.7 ns |   2.17 ns |   1.92 ns | 0.1068 |     672 B |
+| v256 unroll2| 526.0 ns |   2.67 ns |   2.37 ns | 0.1068 |     672 B |
 */
