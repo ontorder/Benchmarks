@@ -43,6 +43,27 @@ public class bench_splits
     [Benchmark]
     public void bench_span()
     {
+        split_v256b_ator ator;
+        split_v256b_data data;
+        var toSplitRent = _bytePool.Rent(VectorByteLen);
+        var toSplitSpan = toSplitRent.AsSpan();
+        ator = split_v256b1("3 words string", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("frase ben piu lunga sticazzi", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("fin", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("mamma mia", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("sto ascoltando luigi nono", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("voglio musica piu strana", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("mi serve un testo piu lungo di c", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("che i sogni si realizzino", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("consiglio del giorno giovedi ven", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("tutti presenti apriamo la seduta", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("votate", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        ator = split_v256b1("cento favorevoli venticinque ast", out data, toSplitSpan); while (split_v256b2(ref ator, ref data)) ;
+        _bytePool.Return(toSplitRent);
+    }
+
+    public void bench_span_ver()
+    {
         _ = split_v256_reset_emb("3 words string");
         _ = split_v256_reset_emb("frase ben piu lunga sticazzi");
         _ = split_v256_reset_emb("fin");
@@ -397,48 +418,55 @@ public class bench_splits
         return spans;
     }
 
-    public ref struct Spans
+    public ref struct split_v256b_ator
     {
-        public Span<byte> Span1;
-        public Span<byte> Span2;
-        public Span<byte> Span3;
-        public Span<byte> Span4;
-        public Span<byte> Span5;
-        public Span<byte> Span6;
-        public Span<byte> Span7;
-        public Span<byte> Span8;
-        public Span<byte> Span9;
+        public int PrevPos;
+        public uint Mask;
+        public ReadOnlySpan<byte> Span1;
     }
 
-    private void split_v256b(string toSplit, ref Spans spans)
+    public ref struct split_v256b_data
     {
-        Span<byte> toSplitSpan = stackalloc byte[VectorByteLen];
-        Encoding.UTF8.GetBytes(toSplit, toSplitSpan);
-        var toSplitV256 = Vector256.Create((ReadOnlySpan<byte>)toSplitSpan);
+        public int ConvertedLen;
+        public Span<byte> SplitSpan;
+    }
 
+    public split_v256b_ator split_v256b1(string toSplit, out split_v256b_data data, Span<byte> toSplitRent)
+    {
+        int realLen = Encoding.UTF8.GetBytes(toSplit, toSplitRent);
+        var toSplitV256 = Vector256.Create((ReadOnlySpan<byte>)toSplitRent);
         var matchesV256 = Vector256.Equals(toSplitV256, SpacesV256);
-        var spacesBitMask = (uint)Avx2.MoveMask(matchesV256);
-        var nonZeroes = BitOperations.PopCount(spacesBitMask);
-        var posArr = new int[nonZeroes];
-        int prevTzc = 0;
-        int posArrId = 0;
 
-        while (spacesBitMask != 0)
+        data = new split_v256b_data
         {
-            var trailZeroCount = BitOperations.TrailingZeroCount(spacesBitMask);
-            posArr[posArrId++] = trailZeroCount + prevTzc;
-            spacesBitMask >>= trailZeroCount + 1;
-            prevTzc += trailZeroCount + 1;
+            SplitSpan = toSplitRent,
+            ConvertedLen = realLen
+        };
+        return new()
+        {
+            Mask = (uint)Avx2.MoveMask(matchesV256),
+        };
+    }
+
+    public bool split_v256b2(ref split_v256b_ator spans, ref split_v256b_data data)
+    {
+        if (spans.Mask == 0)
+        {
+            int curPos1 = spans.PrevPos + spans.Span1.Length;
+            if (curPos1 < data.ConvertedLen)
+            {
+                spans.Span1 = data.SplitSpan[curPos1..];
+                spans.PrevPos = int.MaxValue;
+            }
+            return false;
         }
 
-        int prev = 0;
-        for (int i = 0; i < posArr.Length; ++i)
-        {
-            //spans.Span1 = toSplitSpan[prev..posArr[i]];
-            prev = posArr[i];
-        }
-        if (prev < toSplitSpan.Length)
-            ; //  spans.Span5 = toSplitMem[prev..];
+        var trailZeroCount = BitOperations.TrailingZeroCount(spans.Mask);
+        var curPos = trailZeroCount + spans.PrevPos;
+        spans.Span1 = data.SplitSpan[spans.PrevPos..curPos];
+        spans.Mask >>= trailZeroCount + 1;
+        spans.PrevPos += trailZeroCount + 1;
+        return true;
     }
 
     private IEnumerable<ReadOnlyMemory<byte>> split_vector(string toSplit)
@@ -485,75 +513,21 @@ public class bench_splits
 | bench_split | 484.2 ns | 6.32 ns | 5.92 ns | 0.1869 |    1176 B |
 | bench_span  | 567.9 ns | 3.02 ns | 2.68 ns |      - |         - |
 
-span v2
-| Method      | Mean     | Error     | StdDev    | Median   | Gen0   | Allocated |
-|------------ |---------:|----------:|----------:|---------:|-------:|----------:|
-| bench_split | 2.687 us | 0.0512 us | 0.0986 us | 2.633 us | 0.9537 |    6000 B |
-| bench_span  | 3.281 us | 0.0217 us | 0.0181 us | 3.275 us |      - |         - |
-
-span v3 con StartEnd
-| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
+| Method      | Mean     | Error     | StdDev    | Median | Allocated |
 |------------ |---------:|----------:|----------:|-------:|----------:|
-| bench_split | 2.552 us | 0.0493 us | 0.0659 us | 0.9537 |    6000 B |
-| bench_span  | 3.697 us | 0.0642 us | 0.0600 us |      - |         - |
-
-span v3 con tupla
-| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
-|------------ |---------:|----------:|----------:|-------:|----------:|
-| bench_split | 2.397 us | 0.0137 us | 0.0122 us | 0.9537 |    6000 B |
-| bench_span  | 3.605 us | 0.0710 us | 0.0899 us |      - |         - |
-
-span v4 -- ho sbagliato qualcosa?
-| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
-|------------ |---------:|----------:|----------:|-------:|----------:|
-| bench_split | 2.381 us | 0.0104 us | 0.0087 us | 0.9537 |   5.86 KB |
-| bench_span  | 1.361 us | 0.0076 us | 0.0067 us | 0.2613 |    1.6 KB |
-
-span v4 corretto
-| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
-|------------ |---------:|----------:|----------:|-------:|----------:|
-| bench_split | 2.380 us | 0.0143 us | 0.0127 us | 0.9537 |    6000 B |
-| bench_span  | 3.416 us | 0.0670 us | 0.0772 us |      - |         - |
-
-span v5
-| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
-|------------ |-----------:|---------:|---------:|-------:|----------:|
-| bench_split | 2,416.7 ns | 21.65 ns | 20.25 ns | 0.9537 |    6000 B |
-| bench_span  |   931.5 ns |  3.52 ns |  3.12 ns |      - |         - |
-
-span v256
-| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
-|------------ |-----------:|---------:|---------:|-------:|----------:|
-| bench_split | 2,239.8 ns | 22.62 ns | 18.89 ns | 0.9193 |   5.65 KB |
-| bench_span  |   438.8 ns |  2.53 ns |  2.37 ns | 0.3443 |   2.11 KB |
-
-span vector
-| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
-|------------ |-----------:|---------:|---------:|-------:|----------:|
-| bench_split | 2,275.9 ns | 43.32 ns | 42.55 ns | 0.9193 |   5.65 KB |
-| bench_span  |   634.0 ns |  3.93 ns |  3.28 ns | 0.4282 |   2.63 KB |
-
-span vector512
-| Method      | Mean       | Error    | StdDev   | Gen0   | Allocated |
-|------------ |-----------:|---------:|---------:|-------:|----------:|
-| bench_split | 2,323.7 ns | 13.74 ns | 12.85 ns | 0.9193 |   5.65 KB |
-| bench_span  |   756.0 ns |  2.79 ns |  2.17 ns | 0.5198 |   3.19 KB |
-
-span v256 via reset
-| Method      | Mean       | Error   | StdDev  | Gen0   | Allocated |
-|------------ |-----------:|--------:|--------:|-------:|----------:|
-| bench_split | 2,324.0 ns | 9.75 ns | 8.65 ns | 0.9193 |   5.65 KB |
-| bench_span  |   442.9 ns | 3.35 ns | 3.14 ns | 0.3443 |   2.11 KB |
-
-span string pool
-| Method      | Mean     | Error     | StdDev    | Gen0   | Allocated |
-|------------ |---------:|----------:|----------:|-------:|----------:|
-| bench_split | 2.294 us | 0.0088 us | 0.0074 us | 0.9193 |   5.65 KB |
-| bench_span  | 3.657 us | 0.0687 us | 0.0609 us | 0.3548 |   2.18 KB |
-
-span v256 reset+emb
-| Method      | Mean       | Error   | StdDev  | Gen0   | Allocated |
-|------------ |-----------:|--------:|--------:|-------:|----------:|
-| bench_split | 2,284.8 ns | 7.13 ns | 5.57 ns | 0.9193 |   5.65 KB |
-| bench_span  |   443.9 ns | 5.15 ns | 4.82 ns | 0.3443 |   2.11 KB |
+| split string| 2.345 us |  11.33 ns |  10.05 ns | 0.9193 |    5784 B |
+| span v2     | 3.281 us | 0.0217 us | 0.0181 us | 3.275  |         - |
+| v3 StartEnd | 3.697 us | 0.0642 us | 0.0600 us |      - |         - |
+| v3 tupla    | 3.605 us | 0.0710 us | 0.0899 us |      - |         - |
+| v4 oopsie   | 1.361 us | 0.0076 us | 0.0067 us | 0.2613 |    1.6 KB |
+| v4 corretto | 3.416 us | 0.0670 us | 0.0772 us |      - |         - |
+| string pool | 3.657 us | 0.0687 us | 0.0609 us | 0.3548 |   2.18 KB |
+| span v5     | 931.5 ns |   3.52 ns |   3.12 ns |      - |         - |
+| vector256   | 438.8 ns |   2.53 ns |   2.37 ns | 0.3443 |   2.11 KB |
+| vector      | 634.0 ns |   3.93 ns |   3.28 ns | 0.4282 |   2.63 KB |
+| vector512   | 756.0 ns |   2.79 ns |   2.17 ns | 0.5198 |   3.19 KB |
+| v256+reset  | 442.9 ns |   3.35 ns |   3.14 ns | 0.3443 |   2.11 KB |
+| v245 rst emb| 443.9 ns |   5.15 ns |   4.82 ns | 0.3443 |   2.11 KB |
+| v256b1+2 v1 | 602.2 ns |   1.91 ns |   1.49 ns |      - |         - |
+| v256b1+2 v2 | 305.7 ns |   1.77 ns |   1.57 ns |      - |         - |
 */
