@@ -133,4 +133,9 @@ docker dev, raw client
 | redis1   |   7.807 us |  0.0856 us |  0.0801 us |
 | redis10  |  78.442 us |  1.3042 us |  1.2200 us |
 | redis100 | 823.574 us | 16.4111 us | 23.5363 us |
+
+bad test mysql memory table ExecueSqlRaw
+test 1  :  5.1748 ms
+test 10 :  2.8866 ms
+test 100: 89.4305 ms
 */
