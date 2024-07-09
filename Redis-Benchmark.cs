@@ -134,8 +134,16 @@ docker dev, raw client
 | redis10  |  78.442 us |  1.3042 us |  1.2200 us |
 | redis100 | 823.574 us | 16.4111 us | 23.5363 us |
 
-bad test mysql memory table ExecueSqlRaw
-test 1  :  5.1748 ms
-test 10 :  2.8866 ms
-test 100: 89.4305 ms
+ugly mysql memory table test with ExecueSqlRaw because of keyless table
+insert
+test 1: 4,571 ms
+test 10: 17,2224 ms
+test 100: 159,3676 ms
+
+update
+test 1: 3,9886 ms
+test 10: 2,7049 ms
+test 100: 84,6015 ms
+
+i expected it to be a little faster?
 */
