@@ -44,7 +44,10 @@ public class bench_redis
     public async Task redis1()
     {
         //await _db.StringSetAsync("test_redis1", "a");
-        await _redisclient.send("SET test_redis1_x a");
+        var t1 = _redisclient.send("SET test_redis1_x a");
+        var t2 = _redisclient.readlineasync();
+        await t1;
+        await t2;
     }
 
     [Benchmark]
@@ -61,24 +64,30 @@ public class bench_redis
         //await _db.StringSetAsync("test_redis10j", "a");
         //await _db.StringSetAsync("test_redis10k", "a");
 
-        await _redisclient.send("SET test_redis1_x 1");
-        await _redisclient.send("SET test_redis1_x 2");
-        await _redisclient.send("SET test_redis1_x 3");
-        await _redisclient.send("SET test_redis1_x 4");
-        await _redisclient.send("SET test_redis1_x 5");
-        await _redisclient.send("SET test_redis1_x 6");
-        await _redisclient.send("SET test_redis1_x 7");
-        await _redisclient.send("SET test_redis1_x 8");
-        await _redisclient.send("SET test_redis1_x 9");
-        await _redisclient.send("SET test_redis1_x 0");
+        Task t1, t2;
+        t1 = _redisclient.send("SET test_redis1_x 1"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 2"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 3"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 4"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 5"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 6"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 7"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 8"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 9"); t2 = _redisclient.readlineasync(); await t1; await t2;
+        t1 = _redisclient.send("SET test_redis1_x 0"); t2 = _redisclient.readlineasync(); await t1; await t2;
     }
 
     [Benchmark]
     public async Task redis100()
     {
         for (int i = 0; i < 100; ++i)
-            await _redisclient.send($"SET test_redis1_x {i}");
+        {
+            var t1 = _redisclient.send($"SET test_redis1_x {i}");
+            var t2 = _redisclient.readlineasync();
+            await t1;
+            await t2;
             //await _db.StringSetAsync($"test_redis100_{i}", "a");
+        }
     }
 }
 public class redisclient
@@ -89,7 +98,7 @@ public class redisclient
         s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         await s.ConnectAsync("192.168.150.205", 6379);
         //await s.ConnectAsync("192.168.10.70", 6379);
-        _ = loopreadnullAsync();
+        //_ = loopreadnullAsync();
     }
 
     private async Task loopreadnullAsync()
@@ -102,6 +111,19 @@ public class redisclient
                 break;
             foreach (var i in b)
                 Debug.Write((char)i);
+        }
+        while (s.Connected);
+    }
+    public async Task readlineasync()
+    {
+        var b = new byte[8];
+        do
+        {
+            var temp = await s.ReceiveAsync(b);
+            if (temp == 0) break;
+            var y = System.Text.Encoding.ASCII.GetString(b[..temp]);
+            if (y == "+OK\r\n") return;
+            else throw new Exception();
         }
         while (s.Connected);
     }
@@ -133,6 +155,20 @@ docker dev, raw client
 | redis1   |   7.807 us |  0.0856 us |  0.0801 us |
 | redis10  |  78.442 us |  1.3042 us |  1.2200 us |
 | redis100 | 823.574 us | 16.4111 us | 23.5363 us |
+
+redis, raw client + serial
+| Method   | Mean        | Error     | StdDev      |
+|--------- |------------:|----------:|------------:|
+| redis1   |    292.6 us |   5.82 us |     9.23 us |
+| redis10  |  3,416.1 us | 131.48 us |   357.69 us |
+| redis100 | 32,801.4 us | 936.30 us | 2,594.47 us |
+
+redis, raw client + slightly parallel
+| Method   | Mean        | Error     | StdDev      |
+|--------- |------------:|----------:|------------:|
+| redis1   |    326.2 us |   6.40 us |     6.57 us |
+| redis10  |  3,284.7 us |  63.57 us |   142.19 us |
+| redis100 | 31,174.8 us | 618.61 us | 1,517.46 us |
 
 ugly mysql memory table test with ExecueSqlRaw because of keyless table
 insert
