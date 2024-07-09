@@ -147,3 +147,87 @@ test 100: 84,6015 ms
 
 i expected it to be a little faster?
 */
+/*
+services.AddDbContext<memdbcontext>(setup =>
+    setup.UseMySql("server=192.168.150.205;userid=root;pwd=papapapapa;port=5325;database=testdb;sslmode=none;charset=utf8mb4;",
+    new MySqlServerVersion(new Version(8, 0))));
+var ctx = services.BuildServiceProvider().GetService<memdbcontext>();
+
+if (true)
+{
+    ctx.Database.ExecuteSqlRaw("update benchmem set stringvalue='-' where stringkey='warmup'");
+
+    var sw = Stopwatch.StartNew();
+    ctx.Database.ExecuteSqlRaw("update benchmem set stringvalue='c' where stringkey='test3_mem1_1'");
+    sw.Stop();
+    Console.WriteLine($"test 1: {sw.Elapsed.TotalMilliseconds} ms");
+
+    sw = Stopwatch.StartNew();
+    ctx.Database.ExecuteSqlRaw("update benchmem set stringvalue='c' where stringkey='test_mem10_0';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_1';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_2';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_3';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_4';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_5';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_6';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_7';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_8';"
+        + "update benchmem set stringvalue='c' where stringkey='test3_mem10_9';");
+    sw.Stop();
+    Console.WriteLine($"test 10: {sw.Elapsed.TotalMilliseconds} ms");
+
+    sw = Stopwatch.StartNew();
+    for (int i = 0; i < 100; ++i)
+        ctx.Database.ExecuteSqlRaw($"update benchmem set stringvalue='c' where stringkey='test3_mem100_{i}'");
+    sw.Stop();
+    Console.WriteLine($"test 100: {sw.Elapsed.TotalMilliseconds} ms");
+}
+else
+{
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('warmup3','x')");
+
+    var sw = Stopwatch.StartNew();
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem1_1', 'c')");
+    sw.Stop();
+    Console.WriteLine($"test 1: {sw.Elapsed.TotalMilliseconds} ms");
+
+    sw = Stopwatch.StartNew();
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_0', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_1', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_2', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_3', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_4', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_5', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_6', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_7', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_8', 'C')");
+    ctx.Database.ExecuteSqlRaw("insert into benchmem values('test3_mem10_9', 'C')");
+    sw.Stop();
+    Console.WriteLine($"test 10: {sw.Elapsed.TotalMilliseconds} ms");
+
+    sw = Stopwatch.StartNew();
+    for (int i = 0; i < 100; ++i)
+        ctx.Database.ExecuteSqlRaw($"insert into benchmem values('test3_mem100_{i}', 'c')");
+    sw.Stop();
+    Console.WriteLine($"test 100: {sw.Elapsed.TotalMilliseconds} ms");
+}
+
+Environment.Exit(0);
+
+public class memdbcontext : DbContext
+{
+    public memdbcontext(DbContextOptions<memdbcontext> options) : base(options)
+    {
+    }
+
+    public memdbcontext() { }
+
+    public DbSet<memrecord> memrecords { get; set; }
+}
+[Keyless]
+public class memrecord
+{
+    public string stringkey { get; set; }
+    public string stringvalue { get; set; }
+}
+*/
