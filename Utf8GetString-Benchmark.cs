@@ -281,7 +281,7 @@ public class bench_getstr
 | SpanCopySlice |    55.82 ns |   0.345 ns |   0.306 ns | 0.0178 |      - |     112 B |
 | SpanCopyRange |    56.07 ns |   0.251 ns |   0.223 ns | 0.0178 |      - |     112 B |
 | ArrayRent     |    74.50 ns |   0.400 ns |   0.355 ns | 0.0242 |      - |     152 B |
-| MergeIntoRent |    81.43 ns |   0.944 ns |   0.788 ns | 0.0381 |      - |     240 B |
+| MergeIntoRent |    81.43 ns |   0.944 ns |   0.788 ns | 0.0381 |      - |     240 B | // little mistake, not returning rented buffer
 | BlockCopy     |    92.41 ns |   0.949 ns |   0.888 ns | 0.0293 |      - |     184 B |
 | StringCreate  |   154.80 ns |   0.778 ns |   0.689 ns | 0.0370 |      - |     232 B |
 | AbwDecoder    |   277.18 ns |   1.585 ns |   1.483 ns | 0.0505 |      - |     320 B |
