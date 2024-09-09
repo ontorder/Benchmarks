@@ -29,7 +29,7 @@ public class bench_getstr
             (res, cur) => { res.el.Add((cur, res.acc)); return (res.el, res.acc + cur.Length); },
             r => r.el);
 
-    //[BenchmarkDotNet.Attributes.Benchmark()]
+    [BenchmarkDotNet.Attributes.Benchmark()]
     public string LinkedRos()
     {
         wtf? last = null;
@@ -65,7 +65,7 @@ public class bench_getstr
         return sr.ReadToEnd();
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark()]
+    [BenchmarkDotNet.Attributes.Benchmark()]
     public string PipeTryRead()
     {
         var p = new System.IO.Pipelines.Pipe();
@@ -75,7 +75,7 @@ public class bench_getstr
         return Encoding.UTF8.GetString(r.Buffer);
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark()]
+    //[BenchmarkDotNet.Attributes.Benchmark()]
     public string SelectMany()
     {
         var lin = buffers.SelectMany(_ => _).ToArray();
@@ -114,7 +114,7 @@ public class bench_getstr
     //    return Encoding.UTF8.GetString(agg);
     //}
 
-    [BenchmarkDotNet.Attributes.Benchmark()]
+    //[BenchmarkDotNet.Attributes.Benchmark()]
     public string SpanCopySlice()
     {
         int tot = 0;
@@ -129,7 +129,7 @@ public class bench_getstr
         return Encoding.UTF8.GetString(agg);
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark()]
+    //[BenchmarkDotNet.Attributes.Benchmark()]
     public string SpanCopyRange()
     {
         int tot = 0;
@@ -140,7 +140,7 @@ public class bench_getstr
         return Encoding.UTF8.GetString(agg);
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark()]
+    [BenchmarkDotNet.Attributes.Benchmark()]
     public async Task<string> PipeAsync()
     {
         StringBuilder merger = new();
@@ -180,7 +180,7 @@ public class bench_getstr
         }
     }
 
-    //[BenchmarkDotNet.Attributes.Benchmark()]
+    [BenchmarkDotNet.Attributes.Benchmark()]
     public async Task<string> PipeAsync2()
     {
         StringBuilder merger = new();
@@ -215,7 +215,7 @@ public class bench_getstr
         return new string(abw.WrittenSpan);
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark()]
+    //[BenchmarkDotNet.Attributes.Benchmark()]
     public string ArrayRent()
     {
         var shr = ArrayPool<byte>.Shared;
@@ -260,10 +260,12 @@ public class bench_getstr
             v.CopyTo(merged.AsMemory(offset));
             offset += v.Length;
         }
-        return Encoding.UTF8.GetString(merged);
+        var stringed = Encoding.UTF8.GetString(merged);
+        ArrayPool<byte>.Shared.Return(merged);
+        return stringed;
     }
 
-    public sealed class wtf : ReadOnlySequenceSegment<byte>
+    private sealed class wtf : ReadOnlySequenceSegment<byte>
     {
         public wtf(ReadOnlyMemory<byte> memory, ReadOnlySequenceSegment<byte>? next, long runningIndex)
         {
@@ -281,16 +283,16 @@ public class bench_getstr
 | SpanCopySlice |    55.82 ns |   0.345 ns |   0.306 ns | 0.0178 |      - |     112 B |
 | SpanCopyRange |    56.07 ns |   0.251 ns |   0.223 ns | 0.0178 |      - |     112 B |
 | ArrayRent     |    74.50 ns |   0.400 ns |   0.355 ns | 0.0242 |      - |     152 B |
-| MergeIntoRent |    81.43 ns |   0.944 ns |   0.788 ns | 0.0381 |      - |     240 B | // little mistake, not returning rented buffer
+| MergeIntoRent |    84.44 ns |   1.697 ns |   1.743 ns | 0.0242 |      - |     152 B |
 | BlockCopy     |    92.41 ns |   0.949 ns |   0.888 ns | 0.0293 |      - |     184 B |
 | StringCreate  |   154.80 ns |   0.778 ns |   0.689 ns | 0.0370 |      - |     232 B |
 | AbwDecoder    |   277.18 ns |   1.585 ns |   1.483 ns | 0.0505 |      - |     320 B |
 | MemStrReader  |   363.46 ns |   7.258 ns |   7.129 ns | 0.6337 | 0.0048 |    3976 B |
 | SelectMany    |   350.43 ns |   3.024 ns |   2.680 ns | 0.0916 |      - |     576 B |
-| PipeTryRead   |   548.74 ns |  10.510 ns |  13.291 ns | 0.7591 | 0.0114 |    4760 B |
-| PipeAsync2    |   772.82 ns |   6.102 ns |   5.095 ns | 0.1688 |      - |    1064 B |
+| PipeTryRead   |   464.35 ns |   8.242 ns |   8.094 ns | 0.7591 | 0.0057 |    4760 B |
+| PipeAsync2    |   671.21 ns |   7.424 ns |   6.944 ns | 0.1688 |      - |    1064 B |
+| LinkedRos     |   674.38 ns |  10.205 ns |   9.546 ns | 0.1154 |      - |     728 B |
 | PipeStrReader |   761.41 ns |   8.782 ns |   7.333 ns | 0.6695 | 0.0048 |    4200 B |
-| LinkedRos     |   819.73 ns |   5.799 ns |   5.424 ns | 0.1154 |      - |     728 B |
-| PipeAsync     | 8,265.63 ns | 130.083 ns | 115.315 ns | 0.2899 |      - |    1854 B |
+| PipeAsync     | 1,883.62 ns |  11.794 ns |  11.033 ns | 0.2289 |      - |    1438 B |
 
 */
