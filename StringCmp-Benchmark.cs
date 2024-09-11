@@ -40,10 +40,10 @@ public class bench_compare
         return ret;
     }
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringRegular() => _string2 != _string1;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringRegularCycle()
     {
         var cmp = true;
@@ -63,6 +63,7 @@ public class bench_compare
         return iden;
     }
 
+    //[Benchmark()]
     public bool RegularBytesCycle()
     {
         var giden = true;
@@ -79,14 +80,17 @@ public class bench_compare
     [Benchmark()]
     public bool CopilotUnrolled() => CopilotUnrolled4(_bytes1, _bytes2);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool ByteArraySpan() => ArraySpan(_bytes1, 0, _bytes2);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool ByteSpanSpan() => ArraySpan(_bytes1, 0, _bytes2);
 
     [Benchmark()]
     public bool ByteListSpan() => ListSpan(_bytes1_list, 0, _bytes2);
+
+    [Benchmark()]
+    public bool ViaLinqNo() => _bytes2.SequenceEqual(_bytes1);
 
     // 4/8 byte posso provare a convertirli in uint/ulong e fare un confronto diretto
 
@@ -166,6 +170,7 @@ public class bench_compare
 | RegularBytes     |   2.795 ns | 0.0613 ns | 0.0573 ns |
 | ByteListSpan     |   3.668 ns | 0.0280 ns | 0.0262 ns |
 | BytesUnrolled    |  8.5182 ns | 0.0358 ns | 0.0318 ns |  8.5175 ns |      - |         - |
+| ViaLinqNo        | 23.284 ns  | 0.3924 ns | 0.3479 ns |
 | GetBytesUnrolled | 41.3684 ns | 0.2309 ns | 0.2047 ns | 41.3439 ns | 0.0102 |      64 B |
 | StringNoCase     | 42.1062 ns | 0.2677 ns | 0.2504 ns | 42.0516 ns |      - |         - |
 
