@@ -1,5 +1,3 @@
-// not a well made test, it's for my specific case
-
 using BenchmarkDotNet.Attributes;
 using System;
 using System.Collections.Generic;
@@ -11,8 +9,8 @@ namespace test;
 [MemoryDiagnoser]
 public class bench_compare
 {
-    private static readonly string _string1 = "ab00";
-    private static readonly string _string2 = "ab22";
+    private static readonly string _string1 = Environment.MachineName; // "ab00";
+    private static readonly string _string2 = "dellpc-phenom"; // "ab22";
     private static readonly string[] _strings = ["ab0000", "ab1111", "ab22", "ab3333"];
 
     private static readonly byte[] _bytes1 = System.Text.Encoding.ASCII.GetBytes(_string1);
@@ -40,8 +38,16 @@ public class bench_compare
         return ret;
     }
 
-    //[Benchmark()]
+    [Benchmark()]
     public bool StringRegular() => _string2 != _string1;
+
+    [Benchmark()]
+    public bool StringRegularIndirect() => RegularCompare(_string2, _string1);
+
+    public bool RegularCompare(string a, string b) => a != b;
+
+    [Benchmark()]
+    public bool StringEquals() => _string2.Equals(_string1);
 
     //[Benchmark()]
     public bool StringRegularCycle()
@@ -51,10 +57,19 @@ public class bench_compare
         return cmp;
     }
 
-    //[Benchmark()]
+    [Benchmark()]
     public bool StringNoCase() => string.Compare(_string1, _string2, ignoreCase: true) == 0;
 
     [Benchmark()]
+    public bool StringCultureIgnoreCase() => string.Compare(_string1, _string2, StringComparison.CurrentCultureIgnoreCase) == 0;
+
+    [Benchmark()]
+    public bool StringToUpper() => _string1.ToUpper() == _string2.ToUpper();
+
+    [Benchmark()]
+    public bool StringEqualsNoCase() => _string1.Equals(_string2, StringComparison.CurrentCultureIgnoreCase);
+
+    //[Benchmark()]
     public bool RegularBytes()
     {
         var len = Math.Min(_bytes1.Length, _bytes2.Length);
@@ -77,7 +92,7 @@ public class bench_compare
         return giden;
     }
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool CopilotUnrolled() => CopilotUnrolled4(_bytes1, _bytes2);
 
     //[Benchmark()]
@@ -86,10 +101,10 @@ public class bench_compare
     //[Benchmark()]
     public bool ByteSpanSpan() => ArraySpan(_bytes1, 0, _bytes2);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool ByteListSpan() => ListSpan(_bytes1_list, 0, _bytes2);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool ViaLinqNo() => _bytes2.SequenceEqual(_bytes1);
 
     // 4/8 byte posso provare a convertirli in uint/ulong e fare un confronto diretto
@@ -180,5 +195,16 @@ ciclo
 | StringRegular |  3.532 ns | 0.0173 ns | 0.0153 ns |         - |
 | RegularBytes  | 21.210 ns | 0.1899 ns | 0.1683 ns |         - |
 | BytesUnrolled | 60.968 ns | 0.1751 ns | 0.1638 ns |         - |
+
+più lunga
+| Method                  | Mean       | Error     | StdDev    | Median     | Gen0   | Allocated |
+|------------------------ |-----------:|----------:|----------:|-----------:|-------:|----------:|
+| StringRegular           |  0.2695 ns | 0.0136 ns | 0.0127 ns |  0.2633 ns |      - |         - |
+| StringRegularIndirect   |  0.2251 ns | 0.0152 ns | 0.0142 ns |  0.2173 ns |      - |         - |
+| StringEquals            |  0.0017 ns | 0.0037 ns | 0.0034 ns |  0.0000 ns |      - |         - |
+| StringNoCase            | 29.7319 ns | 0.3423 ns | 0.2858 ns | 29.7275 ns |      - |         - |
+| StringCultureIgnoreCase | 31.6723 ns | 0.3426 ns | 0.3037 ns | 31.6149 ns |      - |         - |
+| StringToUpper           | 32.5622 ns | 0.4227 ns | 0.3748 ns | 32.6019 ns | 0.0076 |      48 B |
+| StringEqualsNoCase      | 31.0747 ns | 0.3569 ns | 0.2980 ns | 31.0604 ns |      - |         - |
 
 */
