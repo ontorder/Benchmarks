@@ -38,15 +38,15 @@ public class bench_compare
         return ret;
     }
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringRegular() => _string2 != _string1;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringRegularIndirect() => RegularCompare(_string2, _string1);
 
     public bool RegularCompare(string a, string b) => a != b;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringEquals() => _string2.Equals(_string1);
 
     //[Benchmark()]
@@ -64,10 +64,22 @@ public class bench_compare
     public bool StringCultureIgnoreCase() => string.Compare(_string1, _string2, StringComparison.CurrentCultureIgnoreCase) == 0;
 
     [Benchmark()]
+    public bool CmpInvCultureIgnoreCase() => string.Compare(_string1, _string2, StringComparison.InvariantCultureIgnoreCase) == 0;
+
+    [Benchmark()]
+    public bool CmpOrdinalIgnoreCase() => string.Compare(_string1, _string2, StringComparison.OrdinalIgnoreCase) == 0;
+
+    [Benchmark()]
     public bool StringToUpper() => _string1.ToUpper() == _string2.ToUpper();
 
     [Benchmark()]
     public bool StringEqualsNoCase() => _string1.Equals(_string2, StringComparison.CurrentCultureIgnoreCase);
+
+    [Benchmark()]
+    public bool InvCultureNoCase() => _string1.Equals(_string2, StringComparison.InvariantCultureIgnoreCase);
+
+    [Benchmark()]
+    public bool OrdinalNoCaseOrdinal() => _string1.Equals(_string2, StringComparison.OrdinalIgnoreCase);
 
     //[Benchmark()]
     public bool RegularBytes()
@@ -196,15 +208,27 @@ ciclo
 | RegularBytes  | 21.210 ns | 0.1899 ns | 0.1683 ns |         - |
 | BytesUnrolled | 60.968 ns | 0.1751 ns | 0.1638 ns |         - |
 
-più lunga
+stringa lunga
 | Method                  | Mean       | Error     | StdDev    | Median     | Gen0   | Allocated |
 |------------------------ |-----------:|----------:|----------:|-----------:|-------:|----------:|
-| StringRegular           |  0.2695 ns | 0.0136 ns | 0.0127 ns |  0.2633 ns |      - |         - |
-| StringRegularIndirect   |  0.2251 ns | 0.0152 ns | 0.0142 ns |  0.2173 ns |      - |         - |
 | StringEquals            |  0.0017 ns | 0.0037 ns | 0.0034 ns |  0.0000 ns |      - |         - |
+| StringRegularIndirect   |  0.2251 ns | 0.0152 ns | 0.0142 ns |  0.2173 ns |      - |         - |
+| StringRegular           |  0.2695 ns | 0.0136 ns | 0.0127 ns |  0.2633 ns |      - |         - |
 | StringNoCase            | 29.7319 ns | 0.3423 ns | 0.2858 ns | 29.7275 ns |      - |         - |
+| StringEqualsNoCase      | 31.0747 ns | 0.3569 ns | 0.2980 ns | 31.0604 ns |      - |         - |
 | StringCultureIgnoreCase | 31.6723 ns | 0.3426 ns | 0.3037 ns | 31.6149 ns |      - |         - |
 | StringToUpper           | 32.5622 ns | 0.4227 ns | 0.3748 ns | 32.6019 ns | 0.0076 |      48 B |
-| StringEqualsNoCase      | 31.0747 ns | 0.3569 ns | 0.2980 ns | 31.0604 ns |      - |         - |
+
+stringa lunga 2
+| Method                  | Mean      | Error     | StdDev    | Gen0   | Allocated |
+|------------------------ |----------:|----------:|----------:|-------:|----------:|
+| OrdinalNoCaseOrdinal    |  1.930 ns | 0.0038 ns | 0.0032 ns |      - |         - |
+| CmpOrdinalIgnoreCase    |  3.953 ns | 0.0160 ns | 0.0141 ns |      - |         - |
+| CmpInvCultureIgnoreCase | 31.128 ns | 0.0734 ns | 0.0651 ns |      - |         - |
+| InvCultureNoCase        | 32.081 ns | 0.1609 ns | 0.1344 ns |      - |         - |
+| StringNoCase            | 32.553 ns | 0.0571 ns | 0.0477 ns |      - |         - |
+| StringEqualsNoCase      | 33.049 ns | 0.1256 ns | 0.0981 ns |      - |         - |
+| StringCultureIgnoreCase | 34.095 ns | 0.0640 ns | 0.0567 ns |      - |         - |
+| StringToUpper           | 36.873 ns | 0.1276 ns | 0.1131 ns | 0.0076 |      48 B |
 
 */
