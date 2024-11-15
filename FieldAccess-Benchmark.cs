@@ -70,3 +70,10 @@ public class fab_d
     public int i8;
     public int[] v1;
 }
+/*
+| Method       | Mean     | Error     | StdDev    | Code Size | Allocated |
+|------------- |---------:|----------:|----------:|----------:|----------:|
+| regular      | 1.485 ns | 0.0147 ns | 0.0115 ns |      52 B |         - |
+| ref_access   | 1.533 ns | 0.0172 ns | 0.0161 ns |      55 B |         - |
+| array_access | 2.143 ns | 0.0277 ns | 0.0259 ns |     112 B |         - |
+*/
