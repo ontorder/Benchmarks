@@ -1,13 +1,21 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 using System.Buffers;
 
 namespace test;
 
-[MemoryDiagnoser]
+[MemoryDiagnoser, SimpleJob(RunStrategy.ColdStart, iterationCount: 5)]
+[MinColumn, MaxColumn, MeanColumn, MedianColumn]
 public class test_frequent_alloc
 {
     private readonly byte[] src = new byte[20];
     private readonly ArrayPool<byte> pool = ArrayPool<byte>.Shared;
+
+    public test_frequent_alloc()
+    {
+        var pre = pool.Rent(999);
+        pool.Return(pre);
+    }
 
     [Benchmark]
     public byte regular_alloc()
@@ -75,11 +83,59 @@ public class test_frequent_alloc
         return ret;
     }
 }
-/* for many reasons i don't trust this that much
+/* throughput test
 | Method               | Mean      | Error    | StdDev   | Gen0   | Gen1   | Allocated |
 |--------------------- |----------:|---------:|---------:|-------:|-------:|----------:|
 | regular_alloc        |  16.12 ns | 0.144 ns | 0.120 ns | 0.0306 |      - |     192 B |
 | object_pool          | 101.56 ns | 0.804 ns | 0.752 ns |      - |      - |         - |
 | regular_alloc_bigger | 103.81 ns | 2.023 ns | 1.794 ns | 0.3723 | 0.0004 |    2336 B |
 | object_pool_bigger   | 141.00 ns | 2.087 ns | 1.850 ns |      - |      - |         - |
+
+coldstart test
+| Method               | Mean      | Error     | StdDev    | Median   | Min      | Max      | Allocated |
+|--------------------- |----------:|----------:|----------:|---------:|---------:|---------:|----------:|
+| regular_alloc        |  58.94 us | 489.45 us | 127.11 us | 1.200 us | 1.200 us | 286.3 us |     928 B |
+| regular_alloc_bigger |  63.48 us | 527.67 us | 137.03 us | 1.600 us | 1.200 us | 308.6 us |    3072 B |
+| object_pool          | 117.68 us | 954.16 us | 247.79 us | 7.100 us | 3.200 us | 560.9 us |     880 B |
+| object_pool_bigger   | 118.98 us | 957.75 us | 248.73 us | 9.000 us | 4.800 us | 563.9 us |    2320 B |
+*/
+/*
+var test = new test_frequent_alloc();
+var test_alloc = new int[1_000_000];
+var test_alloc_big = new int[1_000_000];
+var test_pool = new int[1_000_000];
+var test_pool_big = new int[1_000_000];
+var sw = new Stopwatch();
+
+for (int j = 0; j < 1_000_000; ++j)
+{
+    sw.Restart();
+    test.object_pool_bigger();
+    sw.Stop();
+    test_pool_big[j] = sw.Elapsed.Nanoseconds;
+}
+
+for (int j = 0; j < 1_000_000; ++j)
+{
+    sw.Restart();
+    test.object_pool();
+    sw.Stop();
+    test_pool[j] = sw.Elapsed.Nanoseconds;
+}
+
+for (int j = 0; j < 1_000_000; ++j)
+{
+    sw.Restart();
+    test.regular_alloc_bigger();
+    sw.Stop();
+    test_alloc_big[j] = sw.Elapsed.Nanoseconds;
+}
+
+for (int j = 0; j < 1_000_000; ++j)
+{
+    sw.Restart();
+    test.regular_alloc();
+    sw.Stop();
+    test_alloc[j] = sw.Elapsed.Nanoseconds;
+}
 */
