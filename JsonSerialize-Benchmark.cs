@@ -158,7 +158,7 @@ public class bench_json
         return new string(json);
     }
 
-    [Benchmark]
+    //[Benchmark]
     public string charjsonfor()
     {
         Span<char> value1mem = stackalloc char[11];
@@ -211,7 +211,7 @@ public class bench_json
 
         var totlen = initialtemplate.Length + value1len + escValue2Len + value3len + nullValue.Length;
 
-        var sa = new SpanAction<char, empty>((json, st) =>
+        var sa = new SpanAction<char, byte>((json, st) =>
         {
             Span<char> value1mem = stackalloc char[11];
             var v1ok = value1.TryFormat(value1mem, out var value1len);
@@ -236,14 +236,13 @@ public class bench_json
             v4str.CopyTo(json.Slice(start, v4str.Length)); start += nullValue.Length;
             jsonepil.CopyTo(json.Slice(start, jsonepil.Length));
         });
-        return string.Create(totlen, new empty(), sa);
+        return string.Create(totlen, (byte)0, sa);
     }
-    private struct empty { }
 }
 /*
 | Method        | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |-----------    |---------:|--------:|--------:|-------:|----------:|
-| charjsonctor  | 151.2 ns | 0.71 ns | 0.63 ns | 0.0458 |     288 B |
+| charjsonctor  | 150.0 ns | 1.08 ns | 1.01 ns | 0.0458 |     288 B |
 | charjsonslice | 199.2 ns | 0.77 ns | 0.72 ns | 0.0381 |     240 B |
 | charjsonrange | 205.9 ns | 1.00 ns | 0.89 ns | 0.0381 |     240 B |
 | sbjson        | 236.2 ns | 1.10 ns | 0.98 ns | 0.0863 |     544 B |
