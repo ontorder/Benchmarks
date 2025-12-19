@@ -2,6 +2,7 @@ using BenchmarkDotNet.Attributes;
 using System;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace test;
 
@@ -9,12 +10,13 @@ namespace test;
 public class bench_deserz
 {
     private const string json = @"{""Crap1"":123,""Crap2"":""much data"",""Crap3"":""01:02:03""}";
+    private const string json_camel = @"{""crap1"":123,""crap2"":""much data"",""crap3"":""01:02:03""}";
 
-    //[Benchmark]
-    public Crap withStj()
-    {
-        return System.Text.Json.JsonSerializer.Deserialize<Crap>(json)!;
-    }
+    [Benchmark]
+    public Crap withStj() => System.Text.Json.JsonSerializer.Deserialize<Crap>(json)!;
+
+    [Benchmark]
+    public Crap withStjJsc() => System.Text.Json.JsonSerializer.Deserialize(json, Crap_jsc.Default.Crap)!;
 
     public Crap withUtf8Json()
     {
@@ -24,12 +26,9 @@ public class bench_deserz
     }
 
     //[Benchmark]
-    public Crap withNewtonsoft()
-    {
-        return Newtonsoft.Json.JsonConvert.DeserializeObject<Crap>(json)!;
-    }
+    public Crap withNewtonsoft() => Newtonsoft.Json.JsonConvert.DeserializeObject<Crap>(json)!;
 
-    [Benchmark]
+    //[Benchmark]
     public Crap manually()
     {
         var split = json.Trim('{', '}').Split(',');
@@ -48,7 +47,7 @@ public class bench_deserz
         return manually;
     }
 
-    [Benchmark]
+    //[Benchmark]
     public Crap_fields manually2()
     {
         var split = json.Trim('{', '}').Split(',');
@@ -67,13 +66,6 @@ public class bench_deserz
         return manually;
     }
 
-    public sealed class Crap
-    {
-        public int Crap1 { get; set; }
-        public string Crap2 { get; set; }
-        public TimeSpan Crap3 { get; set; }
-    }
-
     public sealed class Crap_fields
     {
         public int Crap1;
@@ -81,10 +73,25 @@ public class bench_deserz
         public TimeSpan Crap3;
     }
 }
+
+public sealed partial class Crap
+{
+    public int Crap1 { get; set; }
+    public string Crap2 { get; set; }
+    public TimeSpan Crap3 { get; set; }
+}
+
+[JsonSourceGenerationOptions(
+    WriteIndented = false,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.Unspecified,
+    GenerationMode = JsonSourceGenerationMode.Default)]
+[JsonSerializable(typeof(Crap))]
+internal sealed partial class Crap_jsc : JsonSerializerContext;
 /*
 
 | Method         | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |--------------- |---------:|--------:|--------:|-------:|----------:|
+| withStjJsc     | 380.7 ns | 2.67 ns | 2.50 ns | 0.0124 |      80 B |
 | withStj        | 382.3 ns | 1.10 ns | 0.92 ns | 0.0124 |      80 B |
 | manually2      | 417.9 ns | 1.84 ns | 1.72 ns | 0.1540 |     968 B |
 | manually       | 433.0 ns | 2.53 ns | 2.25 ns | 0.1540 |     968 B |
