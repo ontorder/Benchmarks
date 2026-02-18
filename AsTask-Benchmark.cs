@@ -1,4 +1,5 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 namespace test;
 
 [MemoryDiagnoser]
+[SimpleJob(RunStrategy.ColdStart)]
 public class bench_astask
 {
     private static readonly Memory<byte> buffer = new byte[1] { 99 };
@@ -82,7 +84,7 @@ public class bench_astask
     [Benchmark]
     public async Task<int> await_task()
     {
-        var temp = Task.FromResult(1);
+        var temp = Task.FromResult(9999999);
         for (int _ = 0; _ < 100; ++_) await temp;
         return temp.Result;
     }
@@ -90,7 +92,7 @@ public class bench_astask
     [Benchmark]
     public async Task<int> await_vt()
     {
-        var temp = ValueTask.FromResult(1);
+        var temp = ValueTask.FromResult(999999);
         for (int _ = 0; _ < 100; ++_) await temp;
         return temp.Result;
     }
@@ -134,9 +136,23 @@ third run
 | valuetask_channel      | 55.89 ns | 0.444 ns | 0.416 ns |      - |         - |
 | valuetask_channel_vt   | 57.13 ns | 0.262 ns | 0.232 ns |      - |         - |
 
-extra
+extra (value 1)
 | Method     | Mean     | Error   | StdDev  | Allocated |
 |----------- |---------:|--------:|--------:|----------:|
 | await_task | 174.5 ns | 0.67 ns | 0.52 ns |         - |
 | await_vt   | 180.9 ns | 1.51 ns | 1.34 ns |         - |
+
+extra (value 99999)
+| Method     | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|----------- |---------:|--------:|--------:|-------:|----------:|
+| await_vt   | 189.0 ns | 0.88 ns | 0.78 ns | 0.0114 |      72 B |
+| await_task | 191.0 ns | 1.27 ns | 1.12 ns | 0.0229 |     144 B |
+
+extra (value 999999) cold start
+| Method     | Mean     | Error    | StdDev    | Median   | Allocated |
+|----------- |---------:|---------:|----------:|---------:|----------:|
+1 await_task | 15.46 us | 41.00 us | 120.90 us | 2.900 us |     208 B |
+1 await_vt   | 23.37 us | 64.47 us | 190.10 us | 3.300 us |     472 B |
+2 await_task | 14.71 us | 40.07 us | 118.16 us | 2.700 us |     544 B |
+2 await_vt   | 19.37 us | 54.46 us | 160.58 us | 3.150 us |     472 B |
 */
