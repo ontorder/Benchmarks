@@ -29,7 +29,7 @@ public class bench_astask
     }
 
     [Benchmark]
-    public async ValueTask<int> valuetask_channel_sync()
+    public int valuetask_channel_sync()
     {
         var twrite = channel.Writer.WriteAsync(1);
         if (twrite.IsCompleted == false) E.InliningThrowHelper();
@@ -55,7 +55,7 @@ public class bench_astask
     }
 
     [Benchmark]
-    public async ValueTask<byte> valuetask_stream_sync()
+    public byte valuetask_stream_sync()
     {
         var twrite = stream.WriteAsync(buffer);
         if (twrite.IsCompleted == false) E.InliningThrowHelper();
@@ -81,7 +81,7 @@ public class bench_astask
 }
 file static class E
 {
-    public static int InliningThrowHelper() => throw new Exception();
+    [DoesNotReturn] public static int InliningThrowHelper() => throw new Exception();
 }
 /*
 first run
@@ -96,14 +96,25 @@ second run
 | Method                 | Mean     | Error    | StdDev   | Gen0   | Allocated |
 |----------------------- |---------:|---------:|---------:|-------:|----------:|
 | valuetask_stream_sync  | 42.20 ns | 0.185 ns | 0.154 ns |      - |         - |
-| astask_channel         | 45.26 ns | 0.175 ns | 0.163 ns |      - |         - |
-| valuetask_channel_sync | 46.50 ns | 0.615 ns | 0.576 ns |      - |         - |
 | astask_stream          | 49.16 ns | 0.293 ns | 0.244 ns | 0.0114 |      72 B |
 | valuetask_stream_vt    | 51.15 ns | 0.256 ns | 0.214 ns |      - |         - |
 | valuetask_stream       | 55.14 ns | 0.926 ns | 0.821 ns | 0.0114 |      72 B |
+
+| astask_channel         | 45.26 ns | 0.175 ns | 0.163 ns |      - |         - |
+| valuetask_channel_sync | 46.50 ns | 0.615 ns | 0.576 ns |      - |         - |
 | valuetask_channel      | 57.28 ns | 0.379 ns | 0.355 ns |      - |         - |
 | valuetask_channel_vt   | 57.56 ns | 0.274 ns | 0.243 ns |      - |         - |
 
 third run
+| Method                 | Mean     | Error    | StdDev   | Gen0   | Allocated |
+|----------------------- |---------:|---------:|---------:|-------:|----------:|
+| valuetask_stream_sync  | 31.59 ns | 0.347 ns | 0.308 ns |      - |         - |
+| astask_stream          | 51.08 ns | 0.245 ns | 0.204 ns | 0.0114 |      72 B |
+| valuetask_stream_vt    | 52.62 ns | 0.513 ns | 0.401 ns |      - |         - |
+| valuetask_stream       | 55.21 ns | 0.226 ns | 0.189 ns | 0.0114 |      72 B |
 
+| valuetask_channel_sync | 35.93 ns | 0.184 ns | 0.172 ns |      - |         - |
+| astask_channel         | 45.94 ns | 0.212 ns | 0.188 ns |      - |         - |
+| valuetask_channel      | 55.89 ns | 0.444 ns | 0.416 ns |      - |         - |
+| valuetask_channel_vt   | 57.13 ns | 0.262 ns | 0.232 ns |      - |         - |
 */
