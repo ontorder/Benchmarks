@@ -14,21 +14,21 @@ public class bench_astask
     private readonly static Channel<int> channel = Channel.CreateUnbounded<int>();
     private readonly static Stream stream = new MemoryStream();
 
-    [Benchmark]
+    //[Benchmark]
     public async Task<int> valuetask_channel()
     {
         await channel.Writer.WriteAsync(1);
         return await channel.Reader.ReadAsync();
     }
 
-    [Benchmark]
+    //[Benchmark]
     public async ValueTask<int> valuetask_channel_vt()
     {
         await channel.Writer.WriteAsync(1);
         return await channel.Reader.ReadAsync();
     }
 
-    [Benchmark]
+    //[Benchmark]
     public int valuetask_channel_sync()
     {
         var twrite = channel.Writer.WriteAsync(1);
@@ -38,7 +38,7 @@ public class bench_astask
         return tread.Result;
     }
 
-    [Benchmark]
+    //[Benchmark]
     public async Task<byte> valuetask_stream()
     {
         await stream.WriteAsync(buffer);
@@ -46,7 +46,7 @@ public class bench_astask
         return buffer.Span[0];
     }
 
-    [Benchmark]
+    //[Benchmark]
     public async ValueTask<byte> valuetask_stream_vt()
     {
         await stream.WriteAsync(buffer);
@@ -54,7 +54,7 @@ public class bench_astask
         return buffer.Span[0];
     }
 
-    [Benchmark]
+    //[Benchmark]
     public byte valuetask_stream_sync()
     {
         var twrite = stream.WriteAsync(buffer);
@@ -64,19 +64,35 @@ public class bench_astask
         return buffer.Span[0];
     }
 
-    [Benchmark]
+    //[Benchmark]
     public async Task<int> astask_channel()
     {
         await channel.Writer.WriteAsync(1).AsTask();
         return await channel.Reader.ReadAsync().AsTask();
     }
 
-    [Benchmark]
+    //[Benchmark]
     public async Task<byte> astask_stream()
     {
         await stream.WriteAsync(buffer).AsTask();
         await stream.ReadAsync(buffer).AsTask();
         return buffer.Span[0];
+    }
+
+    [Benchmark]
+    public async Task<int> await_task()
+    {
+        var temp = Task.FromResult(1);
+        for (int _ = 0; _ < 100; ++_) await temp;
+        return temp.Result;
+    }
+
+    [Benchmark]
+    public async Task<int> await_vt()
+    {
+        var temp = ValueTask.FromResult(1);
+        for (int _ = 0; _ < 100; ++_) await temp;
+        return temp.Result;
     }
 }
 file static class E
@@ -117,4 +133,10 @@ third run
 | astask_channel         | 45.94 ns | 0.212 ns | 0.188 ns |      - |         - |
 | valuetask_channel      | 55.89 ns | 0.444 ns | 0.416 ns |      - |         - |
 | valuetask_channel_vt   | 57.13 ns | 0.262 ns | 0.232 ns |      - |         - |
+
+extra
+| Method     | Mean     | Error   | StdDev  | Allocated |
+|----------- |---------:|--------:|--------:|----------:|
+| await_task | 174.5 ns | 0.67 ns | 0.52 ns |         - |
+| await_vt   | 180.9 ns | 1.51 ns | 1.34 ns |         - |
 */
