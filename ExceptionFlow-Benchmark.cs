@@ -81,7 +81,7 @@ public class exceptionflowperf
         }
     }
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public async Task<object> test_async_throw()
     {
         try
@@ -94,9 +94,22 @@ public class exceptionflowperf
         }
     }
 
+    [BenchmarkDotNet.Attributes.Benchmark]
+    public async ValueTask<object> async_throw_vt()
+    {
+        try
+        {
+            return await throw_async_vt();
+        }
+        catch
+        {
+            return 2;
+        }
+    }
+
     private static readonly TaskCompletionSource InfiniteTask = new();
 
-    [BenchmarkDotNet.Attributes.Benchmark]
+    //[BenchmarkDotNet.Attributes.Benchmark]
     public async Task<object> test_async_whenany()
     {
         var t = async_whenany();
@@ -104,9 +117,21 @@ public class exceptionflowperf
         return t.IsCompletedSuccessfully ? t.Result : 2;
     }
 
+    [BenchmarkDotNet.Attributes.Benchmark]
+    public async ValueTask<object> async_whenany_vt()
+    {
+        var t = whenany_async_vt();
+        if (t.IsCompleted == false) _ = await Task.WhenAny(t.AsTask(), InfiniteTask.Task);
+        return t.IsCompletedSuccessfully ? t.Result : 2;
+    }
+
     private async Task<object> async_throw() => throw new InvalidOperationException();
 
+    private async ValueTask<object> throw_async_vt() => throw new InvalidOperationException();
+
     private Task<object> async_whenany() => Task.FromException<object>(new InvalidOperationException());
+
+    private ValueTask<object> whenany_async_vt() => ValueTask.FromException<object>(new InvalidOperationException());
 
     public char empt(string s) => s[0];
 
@@ -126,8 +151,8 @@ public class exceptionflowperf
 | Method        | Mean          | Error      | StdDev     | Median        | Gen0   | Allocated |
 |-------------- |--------------:|-----------:|-----------:|--------------:|-------:|----------:|
 | RegularFlow   |     0.0021 ns |  0.0053 ns |  0.0047 ns |     0.0000 ns |      - |         - |
-| ExceptionFlow | 5,585.4309 ns | 62.0282 ns | 58.0213 ns | 5,572.2816 ns | 0.0534 |     352 B |
 | ObjectFlow    |    10.6596 ns |  0.0472 ns |  0.0394 ns |    10.6552 ns | 0.0204 |     128 B |
+| ExceptionFlow | 5,585.4309 ns | 62.0282 ns | 58.0213 ns | 5,572.2816 ns | 0.0534 |     352 B |
 
 // * Warnings *
 ZeroMeasurement
@@ -137,12 +162,14 @@ ZeroMeasurement
 | Method        | Mean          | Error      | StdDev     | Gen0   | Code Size | Allocated |
 |-------------- |--------------:|-----------:|-----------:|-------:|----------:|----------:|
 | RegularFlow   |     0.2368 ns |  0.0048 ns |  0.0045 ns |      - |        NA |         - |
-| ExceptionFlow | 5,530.6784 ns | 44.3156 ns | 41.4528 ns | 0.0610 |     373 B |     400 B |
 | ObjectFlow    |    12.9467 ns |  0.1654 ns |  0.1381 ns | 0.0089 |        NA |      56 B |
+| ExceptionFlow | 5,530.6784 ns | 44.3156 ns | 41.4528 ns | 0.0610 |     373 B |     400 B |
 
 
 | Method             | Mean        | Error     | StdDev    | Gen0   | Gen1   | Gen2   | Allocated |
 |------------------- |------------:|----------:|----------:|-------:|-------:|-------:|----------:|
-| test_async_throw   | 13,541.6 ns | 191.46 ns | 179.10 ns | 0.1831 |      - |      - |    1152 B |
+| async_whenany_vt   |    888.4 ns |  12.54 ns |  11.73 ns | 0.1097 | 0.1087 | 0.0019 |     687 B |
 | test_async_whenany |    983.5 ns |   5.40 ns |   5.05 ns | 0.1326 | 0.1316 | 0.0019 |     831 B |
+| async_throw_vt     | 12,512.3 ns |  60.91 ns |  54.00 ns | 0.1678 |      - |      - |    1080 B |
+| test_async_throw   | 13,541.6 ns | 191.46 ns | 179.10 ns | 0.1831 |      - |      - |    1152 B |
 */
