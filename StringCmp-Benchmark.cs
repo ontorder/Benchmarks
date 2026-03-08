@@ -1,12 +1,14 @@
 using BenchmarkDotNet.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace test;
 
 [MemoryDiagnoser]
+[DisassemblyDiagnoser(printSource: true)]
 public class bench_compare
 {
     private static readonly string _string1 = Environment.MachineName; // "ab00";
@@ -14,9 +16,9 @@ public class bench_compare
     private static readonly string[] _strings = ["ab0000", "ab1111", "ab22", "ab3333"];
 
     private static readonly byte[] _bytes1 = System.Text.Encoding.ASCII.GetBytes(_string1);
-    private static readonly List<byte> _bytes1_list = _bytes1.ToList();
+    private static readonly List<byte> _bytes1_list = [.. _bytes1];
     private static readonly byte[] _bytes2 = System.Text.Encoding.ASCII.GetBytes(_string2);
-    private static readonly byte[][] _bytess = _strings.Select(System.Text.Encoding.ASCII.GetBytes).ToArray();
+    private static readonly byte[][] _bytess = [.. _strings.Select(System.Text.Encoding.ASCII.GetBytes)];
 
     //[Benchmark()]
     public bool GetBytesUnrolled()
@@ -27,7 +29,7 @@ public class bench_compare
         return CompareUnrolled4(aBytes, bBytes);
     }
 
-    //[Benchmark()]
+    [Benchmark()]
     public bool BytesUnrolled() => CompareUnrolled4(_bytes2, _bytes1);
 
     //[Benchmark()]
@@ -57,28 +59,28 @@ public class bench_compare
         return cmp;
     }
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringNoCase() => string.Compare(_string1, _string2, ignoreCase: true) == 0;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringCultureIgnoreCase() => string.Compare(_string1, _string2, StringComparison.CurrentCultureIgnoreCase) == 0;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool CmpInvCultureIgnoreCase() => string.Compare(_string1, _string2, StringComparison.InvariantCultureIgnoreCase) == 0;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool CmpOrdinalIgnoreCase() => string.Compare(_string1, _string2, StringComparison.OrdinalIgnoreCase) == 0;
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringToUpper() => _string1.ToUpper() == _string2.ToUpper();
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool StringEqualsNoCase() => _string1.Equals(_string2, StringComparison.CurrentCultureIgnoreCase);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool InvCultureNoCase() => _string1.Equals(_string2, StringComparison.InvariantCultureIgnoreCase);
 
-    [Benchmark()]
+    //[Benchmark()]
     public bool OrdinalNoCaseOrdinal() => _string1.Equals(_string2, StringComparison.OrdinalIgnoreCase);
 
     //[Benchmark()]
@@ -104,7 +106,7 @@ public class bench_compare
         return giden;
     }
 
-    //[Benchmark()]
+    [Benchmark()]
     public bool CopilotUnrolled() => CopilotUnrolled4(_bytes1, _bytes2);
 
     //[Benchmark()]
@@ -120,6 +122,7 @@ public class bench_compare
     public bool ViaLinqNo() => _bytes2.SequenceEqual(_bytes1);
 
     // 4/8 byte posso provare a convertirli in uint/ulong e fare un confronto diretto
+    // e anche usare simd eventualmente (aspe era in un altro bench?), usare span meglio?
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool CompareUnrolled4(IReadOnlyList<byte> a, byte[] b, int aStart = 0, int bStart = 0)
@@ -151,7 +154,8 @@ public class bench_compare
         if (bLen == 4) return r;
         if (!r) return false;
 
-        throw new Exception("compare too long");
+        ThrowHelper();
+        return false;
     }
 
     private static bool CopilotUnrolled4(byte[] a, byte[] b)
@@ -161,7 +165,8 @@ public class bench_compare
         if (a.Length == 2) return a[0] == b[0] && a[1] == b[1];
         if (a.Length == 3) return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
         if (a.Length == 4) return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
-        throw new Exception();
+        ThrowHelper();
+        return false;
     }
 
     private static bool ListSpan(List<byte> a, int offset, Span<byte> b)
@@ -184,6 +189,9 @@ public class bench_compare
         for (; i < b.Length; ++i) if (a[i] != b[i]) return false;
         return true;
     }
+
+    [DoesNotReturn]
+    private static void ThrowHelper() => throw new Exception("compare too long");
 }
 
 /*
@@ -231,4 +239,11 @@ stringa lunga 2
 | StringCultureIgnoreCase | 34.095 ns | 0.0640 ns | 0.0567 ns |      - |         - |
 | StringToUpper           | 36.873 ns | 0.1276 ns | 0.1131 ns | 0.0076 |      48 B |
 
+
+| Method          | Mean      | Error     | StdDev    | Code Size | Allocated |
+|---------------- |----------:|----------:|----------:|----------:|----------:|
+| CopilotUnrolled | 0.7052 ns | 0.0061 ns | 0.0047 ns |     343 B |         - | throw new
+| CopilotUnrolled | 0.7135 ns | 0.0111 ns | 0.0104 ns |     311 B |         - | throw helper
+| BytesUnrolled   | 4.9141 ns | 0.0805 ns | 0.0753 ns |     295 B |         - | throw new
+| BytesUnrolled   | 5.0749 ns | 0.0777 ns | 0.0727 ns |     243 B |         - | throw helper
 */
