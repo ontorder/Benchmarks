@@ -16,7 +16,7 @@ public class DbContextBench
     {
         var services = new ServiceCollection();
         services.AddDbContext<GaravotDbContext>(static options =>
-            options.UseMySql("server=192.168.150.205;userid=root;pwd=planet;port=3307;database=garavot_ac103u;sslmode=none;charset=utf8mb4;", new MySqlServerVersion("8.0"), null));
+            options.UseMySql("", new MySqlServerVersion("8.0"), null));
         _serviceProvider = services.BuildServiceProvider();
     }
 
