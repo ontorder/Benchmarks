@@ -2,9 +2,14 @@ using BenchmarkDotNet.Attributes;
 
 namespace test;
 
-[MemoryDiagnoser]
+[MemoryDiagnoser, IterationCount(1)]
 public class bench_addstring
 {
+    public IEnumerable<int> enumstringcount()
+    {
+        for (int esc = 500; esc < 2000; esc += 10) yield return esc;
+    }
+
     //[Benchmark]
     public object liststring_11()
     {
@@ -22,18 +27,19 @@ public class bench_addstring
     }
 
     [Benchmark]
-    public object liststring_1111()
+    [ArgumentsSource(nameof(enumstringcount))]
+    public object liststring_1111(int stringcount)
     {
         var l = new List<string>();
-        for (var c = 0; c < 514; ++c) l.Add("cccccccccc" + c);
+        for (var c = 0; c < stringcount; ++c) l.Add("cccccccccc" + c);
         return l;
     }
 
-    [Benchmark]
+    //[Benchmark]
     public object linkedliststrings_1111()
     {
         var ll = new stringlist();
-        for (var c = 0; c < 514; ++c) ll.Add("dddddddddd" + c);
+        for (var c = 0; c < 1111; ++c) ll.Add("dddddddddd" + c);
         return ll;
     }
 
@@ -62,10 +68,11 @@ public class bench_addstring
     }
 
     [Benchmark]
-    public object rented_linkedliststrings_1111()
+    [ArgumentsSource(nameof(enumstringcount))]
+    public object rented_linkedliststrings_1111(int stringcount)
     {
         slr = new stringlistrent();
-        for (var c = 0; c < 514; ++c) slr.Add("gggggggggg" + c);
+        for (var c = 0; c < stringcount; ++c) slr.Add("gggggggggg" + c);
         return slr.get();
     }
 
