@@ -1,3 +1,5 @@
+using System.Buffers;
+
 using BenchmarkDotNet.Attributes;
 
 namespace test;
@@ -92,6 +94,53 @@ public class bench_addstring
         return slr.get();
     }
 }
+
+internal sealed class stringlistrent
+{
+    private readonly LinkedList<string[]> _ll = new();
+    private string[] _current = ArrayPool<string>.Shared.Rent(16);
+    private int _current_index = 0;
+
+    public void Add(string s)
+    {
+        if (_current_index == _current.Length)
+        {
+            _current = ArrayPool<string>.Shared.Rent(16);
+            _current_index = 0;
+            _ll.AddLast(_current);
+        }
+        _current[_current_index++] = s;
+    }
+
+    public object get() => _ll;
+
+    public void payrent()
+    {
+        for (var t = _ll.First; t != null; t = t.Next)
+            ArrayPool<string>.Shared.Return(t.Value);
+    }
+}
+
+internal sealed class stringlist
+{
+    private readonly LinkedList<string[]> _ll = new();
+    private string[] _current = new string[16];
+    private int _current_index = 0;
+
+    public void Add(string s)
+    {
+        if (_current_index == _current.Length)
+        {
+            _current = new string[16];
+            _current_index = 0;
+            _ll.AddLast(_current);
+        }
+        _current[_current_index++] = s;
+    }
+
+    public object get() => _ll;
+}
+
 /*
 | Method                        | Mean        | Error     | StdDev    | Gen0    | Gen1   | Allocated |
 |------------------------------ |------------:|----------:|----------:|--------:|-------:|----------:|
