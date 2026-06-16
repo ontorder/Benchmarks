@@ -1,16 +1,21 @@
 using System.Buffers;
+using System.Runtime.CompilerServices;
 
 using BenchmarkDotNet.Attributes;
 
 namespace test;
 
-[MemoryDiagnoser, IterationCount(1)]
+[MemoryDiagnoser]
+//[IterationCount(1)]
 public class bench_addstring
 {
     public IEnumerable<int> enumstringcount()
     {
         for (int esc = 500; esc < 2000; esc += 10) yield return esc;
     }
+
+    [Params(10, 100, 1000, 1100)]
+    public int addscount;
 
     //[Benchmark]
     public object liststring_11()
@@ -29,19 +34,19 @@ public class bench_addstring
     }
 
     [Benchmark]
-    [ArgumentsSource(nameof(enumstringcount))]
-    public object liststring_1111(int stringcount)
+    //[ArgumentsSource(nameof(enumstringcount))]
+    public object liststring_1111()
     {
         var l = new List<string>();
-        for (var c = 0; c < stringcount; ++c) l.Add("cccccccccc" + c);
+        for (var c = 0; c < addscount; ++c) l.Add("cccccccccc" + c);
         return l;
     }
 
-    //[Benchmark]
+    [Benchmark]
     public object linkedliststrings_1111()
     {
         var ll = new stringlist();
-        for (var c = 0; c < 1111; ++c) ll.Add("dddddddddd" + c);
+        for (var c = 0; c < addscount; ++c) ll.Add("dddddddddd" + c);
         return ll;
     }
 
@@ -69,8 +74,8 @@ public class bench_addstring
         slr = null;
     }
 
-    [Benchmark]
-    [ArgumentsSource(nameof(enumstringcount))]
+    //[Benchmark]
+    //[ArgumentsSource(nameof(enumstringcount))]
     public object rented_linkedliststrings_1111(int stringcount)
     {
         slr = new stringlistrent();
@@ -127,15 +132,30 @@ internal sealed class stringlist
     private string[] _current = new string[16];
     private int _current_index = 0;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Add(string s)
     {
-        if (_current_index == _current.Length)
+        string[] arr = _current;
+        int idx = _current_index;
+        if ((uint)idx < (uint)arr.Length)
         {
-            _current = new string[16];
-            _current_index = 0;
-            _ll.AddLast(_current);
+            arr[idx] = s;
+            _current_index = idx + 1;
         }
-        _current[_current_index++] = s;
+        else
+        {
+            AddSlow(s);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void AddSlow(string s)
+    {
+        var store = new string[16];
+        store[0] = s;
+        _ll.AddLast(store);
+        _current = store;
+        _current_index = 1;
     }
 
     public object get() => _ll;
@@ -159,4 +179,16 @@ internal sealed class stringlist
 | liststring_514               | 7.171 us | 0.1059 us | 0.0884 us | 7.6599 | 0.8392 |  46.99 KB |
 | rented_linkedliststrings_514 | 7.326 us | 0.0383 us | 0.0340 us | 6.0806 | 0.6485 |  37.26 KB |
 | linkedliststrings_514        | 8.060 us | 0.0661 us | 0.0586 us | 6.0730 | 0.6409 |  37.26 KB |
+
+stringlist v2
+| Method            | addscount | Mean        | Error     | StdDev    | Median      | Gen0    | Gen1   | Allocated |
+|------------------ |---------- |------------:|----------:|----------:|------------:|--------:|-------:|----------:|
+| linkedliststrings | 10        |    147.0 ns |   4.40 ns |  12.27 ns |    142.7 ns |  0.1135 | 0.0002 |     712 B |
+| liststring        | 10        |    176.1 ns |   4.38 ns |  11.76 ns |    172.5 ns |  0.1287 | 0.0002 |     808 B |
+| liststring        | 100       |  1,211.0 ns |  10.91 ns |  10.21 ns |  1,215.4 ns |  1.1139 | 0.0248 |    6992 B |
+| linkedliststrings | 100       |  1,211.7 ns |   8.42 ns |   7.88 ns |  1,209.8 ns |  0.9918 | 0.0191 |    6232 B |
+| liststring        | 1000      | 13,934.5 ns | 114.40 ns |  95.53 ns | 13,957.7 ns | 13.8550 | 2.5940 |   87000 B |
+| linkedliststrings | 1000      | 15,970.6 ns | 127.45 ns | 119.21 ns | 15,969.0 ns | 13.2141 | 2.4109 |   83032 B |
+| liststring        | 1100      | 16,345.5 ns | 178.68 ns | 158.40 ns | 16,322.4 ns | 17.8528 | 4.2419 |  112208 B |
+| linkedliststrings | 1100      | 17,490.1 ns | 163.77 ns | 145.18 ns | 17,497.0 ns | 14.8010 | 2.9907 |   93032 B |
 */
