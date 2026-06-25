@@ -21,7 +21,7 @@ public class bench_tokenformat
             .Replace("{token}", "00000000-0000-0000-0000-000000000000");
     }
 
-    //[Benchmark]
+    [Benchmark]
     public string custom_format()
     {
         var tokens = new SortedList<string, object>(capacity: 7) {
@@ -35,7 +35,7 @@ public class bench_tokenformat
         return FormatStringWithPlaceholders(Template, tokens, []);
     }
 
-    //[Benchmark]
+    [Benchmark]
     public string custom_format_nowarn()
     {
         var tokens = new SortedList<string, object>(capacity: 7) {
@@ -58,7 +58,7 @@ public class bench_tokenformat
             { "token", "00000000-0000-0000-0000-000000000000" }
         };
 
-    //[Benchmark]
+    [Benchmark]
     public string custom_format_skipinit()
     {
         return FormatStringWithPlaceholders(Template, init_tokens, []);
@@ -140,7 +140,7 @@ public class bench_tokenformat
             k5 = "token",
             v5 = "00000000-0000-0000-0000-000000000000"
         };
-        return FormatStringWithPlaceholders(Template, tokens, _temp);
+        return FormatStringWithPlaceholders_ref(Template, tokens, _temp);
     }
 
     private static string FormatStringWithPlaceholders(string pattern, SortedList<string, object> placeholders, List<object> warnings)
@@ -303,7 +303,7 @@ public class bench_tokenformat
         static bool TryGetValue((string, object)[] kvs, ReadOnlySpan<char> key, out object? found)
         {
             for (var i = 0; i < kvs.Length; ++i)
-                if (kvs[i].Item1 == key)
+                if (kvs[i].Item1.AsSpan().SequenceEqual(key))
                 {
                     found = kvs[i].Item2;
                     return true;
@@ -404,7 +404,7 @@ public class bench_tokenformat
         }
     }
 
-    private string FormatStringWithPlaceholders(ReadOnlySpan<char> pattern, TestTokens placeholders, List<object> warnings)
+    private string FormatStringWithPlaceholders_ref(ReadOnlySpan<char> pattern, TestTokens placeholders, List<object> warnings)
     {
         if (pattern.Length == 0)
             return string.Empty;
@@ -612,7 +612,7 @@ public class bench_tokenformat
         """;
 }
 /*
-
+template slightly bigger than other cases
 | Method                 | Mean     | Error     | StdDev    | Gen0   | Gen1   | Allocated |
 |----------------------- |---------:|----------:|----------:|-------:|-------:|----------:|
 | just_replace           | 1.895 us | 0.0375 us | 0.0500 us | 2.7351 | 0.0229 |  16.77 KB |
@@ -620,12 +620,14 @@ public class bench_tokenformat
 | custom_format_nowarn   | 2.556 us | 0.0242 us | 0.0226 us | 1.4877 | 0.0191 |   9.13 KB |
 | custom_format          | 2.599 us | 0.0222 us | 0.0186 us | 1.4915 | 0.0305 |   9.16 KB |
 
+possible mistake for list
 | Method             | Mean       | Error    | StdDev   | Gen0   | Gen1   | Allocated |
 |------------------- |-----------:|---------:|---------:|-------:|-------:|----------:|
 | custom_format_list |   530.7 ns |  6.75 ns |  5.27 ns | 0.8669 | 0.0057 |   5.32 KB |
 | just_replace       | 1,558.2 ns | 11.65 ns | 10.33 ns | 2.6779 | 0.0229 |  16.41 KB |
 | custom_format      | 2,408.9 ns | 11.08 ns |  9.82 ns | 1.4648 | 0.0305 |   8.98 KB |
 
+possible mistake for list
 | Method              | Mean        | Error     | StdDev     | Gen0   | Gen1   | Allocated |
 |-------------------- |------------:|----------:|-----------:|-------:|-------:|----------:|
 | custom_format_list  |   622.88 ns | 11.065 ns |  15.870 ns | 0.8669 | 0.0057 |    5448 B |
@@ -633,11 +635,23 @@ public class bench_tokenformat
 | just_replace        | 1,961.00 ns | 38.774 ns |  54.356 ns | 2.6779 | 0.0229 |   16808 B |
 | custom_format       | 2,914.72 ns | 58.256 ns | 114.992 ns | 1.4648 | 0.0305 |    9192 B |
 
+possible mistake for list
 | Method              | Mean       | Error    | StdDev   | Median     | Gen0   | Gen1   | Allocated |
 |-------------------- |-----------:|---------:|---------:|-----------:|-------:|-------:|----------:|
 | custom_format_list  |   532.2 ns |  3.27 ns |  2.90 ns |   531.4 ns | 0.8669 | 0.0057 |   5.32 KB |
 | custom_format_stack |   745.6 ns |  7.07 ns |  6.61 ns |   743.0 ns | 1.3628 | 0.0277 |   8.35 KB |
 | custom_format_rent  |   776.5 ns |  4.33 ns |  4.05 ns |   776.4 ns | 1.3628 | 0.0277 |   8.35 KB |
 | just_replace        | 1,633.8 ns | 30.82 ns | 73.26 ns | 1,598.6 ns | 2.6779 | 0.0229 |  16.41 KB |
+
+corrected
+| Method                 | Mean       | Error    | StdDev    | Median     | Gen0   | Gen1   | Allocated |
+|----------------------- |-----------:|---------:|----------:|-----------:|-------:|-------:|----------:|
+| custom_format_stack    |   717.1 ns |  8.50 ns |   7.95 ns |   713.6 ns | 1.3628 | 0.0277 |   8.35 KB |
+| custom_format_list     |   733.2 ns |  3.48 ns |   3.26 ns |   732.5 ns | 1.3819 | 0.0286 |   8.47 KB |
+| custom_format_rent     |   763.6 ns |  4.55 ns |   4.03 ns |   762.5 ns | 1.3628 | 0.0277 |   8.35 KB |
+| just_replace           | 1,644.5 ns | 38.81 ns | 113.83 ns | 1,578.2 ns | 2.6779 | 0.0229 |  16.41 KB |
+| custom_format_skipinit | 1,805.5 ns | 11.14 ns |   9.87 ns | 1,803.2 ns | 1.4286 | 0.0286 |   8.76 KB |
+| custom_format          | 2,414.7 ns | 15.23 ns |  13.50 ns | 2,414.2 ns | 1.4648 | 0.0305 |   8.98 KB |
+| custom_format_nowarn   | 2,444.6 ns | 24.45 ns |  22.87 ns | 2,438.2 ns | 1.4572 | 0.0305 |   8.95 KB |
 
 */
