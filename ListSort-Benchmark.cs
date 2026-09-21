@@ -141,4 +141,26 @@ x100
 | compareto     | 2.541 us | 0.0161 us | 0.0150 us |
 | quantize      |       NA |        NA |        NA |
 
+net10
+
+x10
+| Method        | Mean     | Error   | StdDev  |
+|-------------- |---------:|--------:|--------:|
+| tuple_compare | 114.6 ns | 0.70 ns | 0.66 ns |
+| ticks_compare | 114.6 ns | 0.56 ns | 0.47 ns |
+| compareto     | 117.7 ns | 0.57 ns | 0.48 ns |
+| flat_ifs      | 120.1 ns | 0.60 ns | 0.50 ns |
+| dumb_switch   | 122.6 ns | 1.08 ns | 1.01 ns |
+| quantize      | 236.1 ns | 2.17 ns | 2.03 ns |
+
+x100
+| Method        | Mean     | Error     | StdDev    |
+|-------------- |---------:|----------:|----------:|
+| flat_ifs      | 2.070 us | 0.0103 us | 0.0086 us |
+| dumb_switch   | 2.085 us | 0.0062 us | 0.0052 us |
+| ticks_compare | 2.177 us | 0.0332 us | 0.0355 us |
+| tuple_compare | 2.241 us | 0.0102 us | 0.0096 us |
+| compareto     | 2.277 us | 0.0230 us | 0.0192 us |
+| quantize      |       NA |        NA |        NA |
+
 */
